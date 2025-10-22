@@ -18,9 +18,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.ExpandLess
-import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -205,9 +205,9 @@ fun ExpandableFAQCard(
                 // Expand/Collapse Icon
                 Icon(
                     imageVector = if (isExpanded) {
-                        Icons.Rounded.ExpandLess
+                        Icons.Rounded.KeyboardArrowUp
                     } else {
-                        Icons.Rounded.ExpandMore
+                        Icons.Rounded.KeyboardArrowDown
                     },
                     contentDescription = if (isExpanded) "Collapse" else "Expand",
                     tint = if (isExpanded) {
