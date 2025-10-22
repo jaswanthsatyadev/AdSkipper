@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AdSkipper</string>
+    <string name="welcome_to_adskipper">Welcome to AdSkipper!</string>
+    <string name="adskipper_description">This app helps you automatically skip YouTube ads. To get started, you\'ll need to enable the accessibility service.</string>
+    <string name="get_started">Get Started</string>
+    <string name="enable_accessibility_service">Enable Accessibility Service</string>
+    <string name="accessibility_service_description">AdSkipper needs accessibility service to detect and skip ads. Please enable it in the settings.</string>
+    <string name="open_settings">Open Settings</string>
+    <string name="done">Done</string>
+    <string name="home_screen_title">AdSkipper</string>
+    <string name="main_service_switch">Main Service</string>
+    <string name="service_status_active">Active - On</string>
+    <string name="service_status_inactive">Inactive - Off</string>
+    <string name="enable_permission_subtitle">Enable accessibility permission to start</string>
+    <string name="enable_service_button">Enable Service</string>
+    <string name="auto_mute_ads">Auto-mute ads</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Settings</string>
+    <string name="service_settings_title">Service Settings</string>
+    <string name="vibrate_on_skip">Vibrate on skip</string>
+    <string name="show_notification">Show notification</string>
+    <string name="skip_delay">Skip delay</string>
+
+    <string name="statistics_title">Statistics</string>
+    <string name="total_ads_skipped">Total ads skipped</string>
+    <string name="time_saved">Time saved</string>
+    <string name="reset_statistics">Reset statistics</string>
+
+    <string name="about_title">About</string>
+    <string name="app_version">App version</string>
+    <string name="developer_details">Developed By Jaswanth Satya Dev</string>
+    <string name="linkedin_profile">LinkedIn Profile</string>
+    <string name="github_profile">GitHub Profile</string>
+    <string name="rate_on_play_store">Rate on Play Store</string>
+
+    <string name="premium_title">Premium</string>
+    <string name="go_premium">Go Premium</string>
+    <string name="premium_features">Unlock exclusive features</string>
+    <string name="coming_soon">Coming soon</string>
+</resources>

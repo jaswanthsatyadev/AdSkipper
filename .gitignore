@@ -1,0 +1,41 @@
+# IDE files
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+
+# Build folder
+/build
+/app/build
+
+# Captures
+/captures
+
+# Generated files
+.externalNativeBuild
+.cxx
+
+# Local properties
+local.properties
+
+# Keystore files
+*.jks
+*.keystore
+
+# Google services
+/app/google-services.json
+
+# Crashlytics
+/app/fabric.properties
+
+# Proguard
+/app/proguard/mapping.txt
+/app/proguard/seeds.txt
+/app/proguard/usage.txt
+/app/ai_prompt.md
