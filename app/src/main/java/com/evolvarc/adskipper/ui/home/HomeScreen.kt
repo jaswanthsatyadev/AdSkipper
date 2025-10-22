@@ -89,14 +89,6 @@ fun HomeScreenContent(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { 
-                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                context.startActivity(intent)
-            }) {
-                Icon(Icons.Rounded.Settings, contentDescription = "Open Settings")
-            }
         }
     ) { paddingValues ->
         Column(
@@ -124,10 +116,8 @@ fun HomeScreenContent(
                 )
                 Switch(
                     checked = isServiceEnabled,
-                    onCheckedChange = { 
-                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                        context.startActivity(intent)
-                    }
+                    enabled = false,  // Accessibility services can't be toggled programmatically
+                    onCheckedChange = { /* No-op - user must enable in settings */ }
                 )
             }
 

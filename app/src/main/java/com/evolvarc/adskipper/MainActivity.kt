@@ -4,8 +4,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -30,28 +37,43 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AdSkipperTheme {
-                val onboardingComplete by userDataStore.onboardingComplete.collectAsState(initial = false)
+                // Use null as initial state to show loading screen instead of guessing
+                val onboardingComplete by userDataStore.onboardingComplete.collectAsState(initial = null)
 
-                if (onboardingComplete) {
-                    val navController = rememberNavController()
-                    NavHost(navController = navController, startDestination = "home") {
-                        composable("home") {
-                            HomeScreen(
-                                onNavigateToSettings = { navController.navigate("settings") }
-                            )
-                        }
-                        composable("settings") {
-                            SettingsScreen(onNavigateUp = { navController.navigateUp() })
+                when (onboardingComplete) {
+                    null -> {
+                        // Show loading screen while data is being fetched
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.White),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
                         }
                     }
-                } else {
-                    OnboardingScreen(
-                        onOnboardingFinished = {
-                            lifecycleScope.launch {
-                                userDataStore.setOnboardingComplete(true)
+                    true -> {
+                        val navController = rememberNavController()
+                        NavHost(navController = navController, startDestination = "home") {
+                            composable("home") {
+                                HomeScreen(
+                                    onNavigateToSettings = { navController.navigate("settings") }
+                                )
                             }
-                        },
-                    )
+                            composable("settings") {
+                                SettingsScreen(onNavigateUp = { navController.navigateUp() })
+                            }
+                        }
+                    }
+                    false -> {
+                        OnboardingScreen(
+                            onOnboardingFinished = {
+                                lifecycleScope.launch {
+                                    userDataStore.setOnboardingComplete(true)
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }

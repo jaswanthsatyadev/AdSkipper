@@ -118,11 +118,44 @@ fun SettingsScreen(
                 onSkipDelayChanged = { viewModel.setSkipDelay(it) }
             )
             Spacer(modifier = Modifier.height(16.dp))
+            AccessibilitySettingsSection()
+            Spacer(modifier = Modifier.height(16.dp))
             StatisticsSection(totalAdsSkipped, totalTimeSaved, onResetClick = { showResetDialog = true })
             Spacer(modifier = Modifier.height(16.dp))
             AboutSection()
             Spacer(modifier = Modifier.height(16.dp))
             PremiumSection()
+        }
+    }
+}
+
+@Composable
+fun AccessibilitySettingsSection() {
+    val context = LocalContext.current
+    
+    Column {
+        Text(
+            text = "Accessibility Service",
+            style = MaterialTheme.typography.titleLarge
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Card {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Configure accessibility service settings",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = { 
+                        val intent = Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Open Accessibility Settings")
+                }
+            }
         }
     }
 }

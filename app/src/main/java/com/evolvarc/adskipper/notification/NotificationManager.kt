@@ -63,4 +63,78 @@ object NotificationManager {
             .addAction(R.drawable.ic_skip, "Pause Service", pauseServicePendingIntent)
             .build()
     }
+    
+    /**
+     * Notification when actively monitoring an app (e.g., YouTube is open)
+     */
+    fun getNotificationActive(context: Context, adsSkipped: Int, appName: String): Notification {
+        val title = "AdSkipper Active"
+        val text = "Watching $appName for ads... Skipped: $adsSkipped"
+
+        val openAppIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val openAppPendingIntent: PendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            openAppIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val pauseServiceIntent = Intent(context, ServiceControlReceiver::class.java).apply {
+            action = ServiceControlReceiver.ACTION_PAUSE_SERVICE
+        }
+        val pauseServicePendingIntent: PendingIntent = PendingIntent.getBroadcast(
+            context, 
+            1, 
+            pauseServiceIntent, 
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return NotificationCompat.Builder(context, CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setSmallIcon(R.drawable.ic_skip)
+            .setContentIntent(openAppPendingIntent)
+            .addAction(R.drawable.ic_skip, "Open App", openAppPendingIntent)
+            .addAction(R.drawable.ic_skip, "Pause Service", pauseServicePendingIntent)
+            .build()
+    }
+    
+    /**
+     * Notification when idle (no monitored apps are open)
+     */
+    fun getNotificationIdle(context: Context, adsSkipped: Int): Notification {
+        val title = "AdSkipper Idle"
+        val text = "Waiting for YouTube... Skipped: $adsSkipped today"
+
+        val openAppIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val openAppPendingIntent: PendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            openAppIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val pauseServiceIntent = Intent(context, ServiceControlReceiver::class.java).apply {
+            action = ServiceControlReceiver.ACTION_PAUSE_SERVICE
+        }
+        val pauseServicePendingIntent: PendingIntent = PendingIntent.getBroadcast(
+            context, 
+            1, 
+            pauseServiceIntent, 
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return NotificationCompat.Builder(context, CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setSmallIcon(R.drawable.ic_skip)
+            .setContentIntent(openAppPendingIntent)
+            .addAction(R.drawable.ic_skip, "Open App", openAppPendingIntent)
+            .addAction(R.drawable.ic_skip, "Pause Service", pauseServicePendingIntent)
+            .build()
+    }
 }
