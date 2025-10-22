@@ -211,14 +211,14 @@ class AdSkipperService : AccessibilityService() {
         
         // Hide notification when app is not active
         serviceScope.launch {
-            Log.d(TAG, "Stopped monitoring - hiding notification")
+            Log.d(TAG, "Stopped monitoring - removing notification")
             try {
-                // Stop showing foreground notification
+                // Stop showing foreground notification and remove it completely
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    stopForeground(STOP_FOREGROUND_DETACH)
+                    stopForeground(STOP_FOREGROUND_REMOVE)
                 } else {
                     @Suppress("DEPRECATION")
-                    stopForeground(false)
+                    stopForeground(true)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error hiding notification: ${e.message}")
@@ -475,6 +475,10 @@ class AdSkipperService : AccessibilityService() {
                 userDataStore.addTimeSaved(5) // Assume 5 seconds saved per ad
 
                 updateNotification()
+                
+                // Broadcast ad skip event to show toast
+                val intent = android.content.Intent("com.evolvarc.adskipper.AD_SKIPPED")
+                sendBroadcast(intent)
 
                 // Unmute after a delay if auto-mute was enabled
                 if (isAutoMuteEnabled) {

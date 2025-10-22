@@ -8,23 +8,28 @@
     <string name="accessibility_service_description">AdSkipper needs accessibility service to detect and skip ads. Please enable it in the settings.</string>
     <string name="open_settings">Open Settings</string>
     <string name="done">Done</string>
-    <string name="home_screen_title">AdSkipper</string>
-    <string name="main_service_switch">Main Service</string>
-    <string name="service_status_active">Active - On</string>
-    <string name="service_status_inactive">Inactive - Off</string>
-    <string name="enable_permission_subtitle">Enable accessibility permission to start</string>
-    <string name="enable_service_button">Enable Service</string>
-    <string name="auto_mute_ads">Auto-mute ads</string>
-
+    
+    <!-- Home Screen -->
+    <string name="home_screen_title">Home</string>
+    <string name="service_status_active">Active</string>
+    <string name="service_status_inactive">Idle</string>
+    <string name="service_status_disabled">Disabled</string>
+    <string name="watching_youtube">Watching YouTube for ads</string>
+    <string name="waiting_for_app">Waiting for YouTube to open</string>
+    <string name="enable_accessibility">Enable Accessibility Service</string>
+    <string name="enable_now">Enable Now</string>
+    <string name="total_ads_skipped_title">Total Ads Skipped</string>
+    <string name="how_it_works">How it works</string>
+    
     <!-- Settings Screen -->
     <string name="settings_title">Settings</string>
     <string name="service_settings_title">Service Settings</string>
     <string name="vibrate_on_skip">Vibrate on skip</string>
     <string name="show_notification">Show notification</string>
     <string name="skip_delay">Skip delay</string>
+    <string name="accessibility_settings_title">Accessibility Service</string>
 
     <string name="statistics_title">Statistics</string>
-    <string name="total_ads_skipped">Total ads skipped</string>
     <string name="time_saved">Time saved</string>
     <string name="reset_statistics">Reset statistics</string>
 
@@ -35,8 +40,21 @@
     <string name="github_profile">GitHub Profile</string>
     <string name="rate_on_play_store">Rate on Play Store</string>
 
-    <string name="premium_title">Premium</string>
+    <string name="subscription_title">Premium</string>
     <string name="go_premium">Go Premium</string>
     <string name="premium_features">Unlock exclusive features</string>
     <string name="coming_soon">Coming soon</string>
+    
+    <!-- How It Works Screen -->
+    <string name="how_it_works_title">How AdSkipper Works</string>
+    <string name="faq_title">Frequently Asked Questions</string>
+    
+    <!-- Bottom Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_how_it_works">How it works</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_subscription">Premium</string>
+    
+    <!-- Ad Skip Toast -->
+    <string name="ad_skipped">Ad Skipper, skipped an ad for you ;)</string>
 </resources>

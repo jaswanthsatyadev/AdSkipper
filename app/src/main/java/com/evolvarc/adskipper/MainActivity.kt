@@ -1,5 +1,7 @@
 package com.evolvarc.adskipper
 
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,16 +16,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.evolvarc.adskipper.data.UserDataStore
+import com.evolvarc.adskipper.receivers.AdSkippedReceiver
 import com.evolvarc.adskipper.ui.home.HomeScreen
+import com.evolvarc.adskipper.ui.howitworks.HowItWorksScreen
+import com.evolvarc.adskipper.ui.navigation.BottomNavigationBar
 import com.evolvarc.adskipper.ui.onboarding.OnboardingScreen
 import com.evolvarc.adskipper.ui.settings.SettingsScreen
+import com.evolvarc.adskipper.ui.subscription.SubscriptionScreen
 import com.evolvarc.adskipper.ui.theme.AdSkipperTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -31,10 +42,21 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var userDataStore: UserDataStore
+    
+    private val adSkippedReceiver = AdSkippedReceiver()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        // Register ad skipped receiver
+        val filter = IntentFilter("com.evolvarc.adskipper.AD_SKIPPED")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(adSkippedReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(adSkippedReceiver, filter)
+        }
+        
         setContent {
             AdSkipperTheme {
                 // Use null as initial state to show loading screen instead of guessing
@@ -53,17 +75,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     true -> {
-                        val navController = rememberNavController()
-                        NavHost(navController = navController, startDestination = "home") {
-                            composable("home") {
-                                HomeScreen(
-                                    onNavigateToSettings = { navController.navigate("settings") }
-                                )
-                            }
-                            composable("settings") {
-                                SettingsScreen(onNavigateUp = { navController.navigateUp() })
-                            }
-                        }
+                        MainAppScreen()
                     }
                     false -> {
                         OnboardingScreen(
@@ -75,6 +87,54 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+            }
+        }
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(adSkippedReceiver)
+    }
+}
+
+@Composable
+fun MainAppScreen() {
+    val navController = rememberNavController()
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+
+    Scaffold(
+        bottomBar = {
+            BottomNavigationBar(
+                currentRoute = currentRoute,
+                onNavigate = { route ->
+                    navController.navigate(route) {
+                        popUpTo(navController.graph.startDestinationId)
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        NavHost(
+            navController = navController,
+            startDestination = "home",
+            modifier = Modifier
+        ) {
+            composable("home") {
+                HomeScreen(
+                    onNavigateToSettings = { navController.navigate("settings") },
+                    onNavigateToHowItWorks = { navController.navigate("how_it_works") }
+                )
+            }
+            composable("how_it_works") {
+                HowItWorksScreen(onNavigateUp = { navController.navigateUp() })
+            }
+            composable("settings") {
+                SettingsScreen(onNavigateUp = { navController.navigateUp() })
+            }
+            composable("subscription") {
+                SubscriptionScreen(onNavigateUp = { navController.navigateUp() })
             }
         }
     }

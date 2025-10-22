@@ -179,7 +179,6 @@ fun ServiceSettingsSection(
         Spacer(modifier = Modifier.height(8.dp))
         Card {
             Column(modifier = Modifier.padding(16.dp)) {
-                SettingRow(title = stringResource(id = R.string.auto_mute_ads), checked = isAutoMuteEnabled, onCheckedChange = onAutoMuteChanged)
                 SettingRow(title = stringResource(id = R.string.vibrate_on_skip), checked = isVibrateOnSkipEnabled, onCheckedChange = onVibrateOnSkipChanged)
                 SettingRow(title = stringResource(id = R.string.show_notification), checked = isShowNotificationEnabled, onCheckedChange = onShowNotificationChanged)
                 Spacer(modifier = Modifier.height(8.dp))
@@ -263,7 +262,7 @@ fun AboutSection() {
 fun PremiumSection() {
     Column {
         Text(
-            text = stringResource(id = R.string.premium_title),
+            text = stringResource(id = R.string.subscription_title),
             style = MaterialTheme.typography.titleLarge
         )
         Spacer(modifier = Modifier.height(8.dp))

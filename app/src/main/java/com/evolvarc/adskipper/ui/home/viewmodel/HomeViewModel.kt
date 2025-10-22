@@ -23,8 +23,8 @@ class HomeViewModel @Inject constructor(
     private val _isServiceEnabled = MutableStateFlow(false)
     val isServiceEnabled: StateFlow<Boolean> = _isServiceEnabled.asStateFlow()
 
-    val autoMuteAds: StateFlow<Boolean> = userDataStore.autoMuteAds
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val totalAdsSkipped: StateFlow<Int> = userDataStore.totalAdsSkipped
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val isFirstHomeScreenVisit: StateFlow<Boolean> = userDataStore.isFirstHomeScreenVisit
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
@@ -35,12 +35,6 @@ class HomeViewModel @Inject constructor(
 
     fun checkServiceStatus() {
         _isServiceEnabled.value = AccessibilityServiceUtils.isAccessibilityServiceEnabled(application)
-    }
-
-    fun setAutoMuteAds(isAutoMute: Boolean) {
-        viewModelScope.launch {
-            userDataStore.setAutoMuteAds(isAutoMute)
-        }
     }
 
     fun setFirstHomeScreenVisit(isFirst: Boolean) {
