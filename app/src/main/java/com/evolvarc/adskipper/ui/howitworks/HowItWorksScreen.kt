@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,7 +56,8 @@ data class FAQItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HowItWorksScreen(
-    onNavigateUp: () -> Unit
+    paddingValues: PaddingValues = PaddingValues(),
+    onNavigateUp: () -> Unit = {}
 ) {
     val faqItems = listOf(
         FAQItem(
@@ -111,11 +113,12 @@ fun HowItWorksScreen(
                 }
             )
         }
-    ) { paddingValues ->
+    ) { scaffoldPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(scaffoldPadding)
+                .padding(bottom = paddingValues.calculateBottomPadding())
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)

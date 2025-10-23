@@ -80,6 +80,7 @@ import com.evolvarc.adskipper.utils.AppUtils
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
+    paddingValues: PaddingValues = PaddingValues(),
     onNavigateUp: () -> Unit
 ) {
     val isVibrateOnSkipEnabled by viewModel.vibrateOnSkip.collectAsStateWithLifecycle()
@@ -111,14 +112,18 @@ fun SettingsScreen(
                 )
             )
         }
-    ) { paddingValues ->
+    ) { scaffoldPadding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(scaffoldPadding),
             verticalArrangement = Arrangement.spacedBy(20.dp),
-            contentPadding = PaddingValues(bottom = 24.dp)
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 12.dp,
+                bottom = 24.dp + paddingValues.calculateBottomPadding()
+            )
         ) {
             item {
                 ServiceSettingsSection(

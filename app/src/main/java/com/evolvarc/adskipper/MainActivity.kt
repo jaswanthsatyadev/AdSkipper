@@ -9,6 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -119,22 +120,23 @@ fun MainAppScreen() {
         NavHost(
             navController = navController,
             startDestination = "home",
-            modifier = Modifier
+            modifier = Modifier.fillMaxSize()
         ) {
             composable("home") {
                 HomeScreen(
+                    paddingValues = paddingValues,
                     onNavigateToSettings = { navController.navigate("settings") },
                     onNavigateToHowItWorks = { navController.navigate("how_it_works") }
                 )
             }
             composable("how_it_works") {
-                HowItWorksScreen(onNavigateUp = { navController.navigateUp() })
-            }
-            composable("settings") {
-                SettingsScreen(onNavigateUp = { navController.navigateUp() })
+                HowItWorksScreen(paddingValues = paddingValues)
             }
             composable("subscription") {
-                SubscriptionScreen(onNavigateUp = { navController.navigateUp() })
+                SubscriptionScreen(paddingValues = paddingValues)
+            }
+            composable("settings") {
+                SettingsScreen(paddingValues = paddingValues, onNavigateUp = { navController.navigateUp() })
             }
         }
     }

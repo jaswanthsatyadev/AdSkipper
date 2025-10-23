@@ -13,14 +13,14 @@ import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    secondary = Gold80,
+    tertiary = Amber80
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    secondary = Gold40,
+    tertiary = Amber40
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -35,20 +35,12 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun AdSkipperTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    darkTheme: Boolean = false,  // Force light theme for consistent branding
+    dynamicColor: Boolean = false,  // Disable dynamic color to use custom theme
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    // Always use light color scheme for consistent premium branding
+    val colorScheme = LightColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,

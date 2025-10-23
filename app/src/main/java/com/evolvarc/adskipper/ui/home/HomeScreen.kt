@@ -9,6 +9,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -57,12 +59,14 @@ import kotlinx.coroutines.delay
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
+    paddingValues: PaddingValues = PaddingValues(),
     onNavigateToSettings: () -> Unit,
     onNavigateToHowItWorks: () -> Unit
 ) {
     val isServiceEnabled by viewModel.isServiceEnabled.collectAsStateWithLifecycle()
+    val isYouTubeActive by viewModel.isYouTubeActive.collectAsStateWithLifecycle()
     val totalAdsSkipped by viewModel.totalAdsSkipped.collectAsStateWithLifecycle(initialValue = 0)
-    val isFirstHomeScreenVisit by viewModel.isFirstHomeScreenVisit.collectAsStateWithLifecycle()
+    // tutorial overlay removed — no first-visit overlay shown anymore
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -74,39 +78,41 @@ fun HomeScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         HomeScreenContent(
             isServiceEnabled = isServiceEnabled,
+            isYouTubeActive = isYouTubeActive,
             totalAdsSkipped = totalAdsSkipped,
+            paddingValues = paddingValues,
             onNavigateToSettings = onNavigateToSettings,
             onNavigateToHowItWorks = onNavigateToHowItWorks
         )
 
-        if (isFirstHomeScreenVisit) {
-            TutorialOverlay(onDismiss = { viewModel.setFirstHomeScreenVisit(false) })
-        }
+        // tutorial overlay intentionally disabled
     }
 }
 
 @Composable
 fun HomeScreenContent(
     isServiceEnabled: Boolean,
+    isYouTubeActive: Boolean,
     totalAdsSkipped: Int,
+    paddingValues: PaddingValues = PaddingValues(),
     onNavigateToSettings: () -> Unit,
     onNavigateToHowItWorks: () -> Unit
 ) {
     val context = LocalContext.current
 
-    Scaffold { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
             Spacer(modifier = Modifier.height(24.dp))
 
             // Status Card - Material 3 Expressive Design
             StatusCard(
                 isServiceEnabled = isServiceEnabled,
+                isYouTubeActive = isYouTubeActive,
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
             )
@@ -144,32 +150,40 @@ fun HomeScreenContent(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
-    }
 }
 
 @Composable
 fun StatusCard(
     isServiceEnabled: Boolean,
+    isYouTubeActive: Boolean,
     modifier: Modifier = Modifier
 ) {
     val statusText = when {
-        isServiceEnabled -> stringResource(R.string.service_status_active)
-        else -> stringResource(R.string.service_status_disabled)
+        !isServiceEnabled -> "Disabled"
+        isYouTubeActive -> "Active"
+        else -> "Enabled"
     }
 
     val statusSubtext = when {
-        isServiceEnabled -> stringResource(R.string.watching_youtube)
-        else -> stringResource(R.string.waiting_for_app)
+        !isServiceEnabled -> stringResource(R.string.waiting_for_app)
+        isYouTubeActive -> "Currently watching YouTube"
+        else -> "Ready to skip ads"
     }
 
     val backgroundColor = when {
-        isServiceEnabled -> MaterialTheme.colorScheme.primaryContainer
-        else -> MaterialTheme.colorScheme.errorContainer
+        isServiceEnabled -> Color(0xFFE8E0FF)  // Light purple background when enabled
+        else -> Color(0xFFFFE8E8)  // Light red background when disabled
     }
 
     val statusColor = when {
-        isServiceEnabled -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.error
+        isServiceEnabled -> Color(0xFF6750A4)  // Purple circle when enabled
+        else -> Color(0xFFB3261E)  // Red circle when disabled
+    }
+
+    val textColor = when {
+        isServiceEnabled && isYouTubeActive -> Color(0xFF22C55E)  // Green text when watching
+        isServiceEnabled -> Color(0xFFFFA500)  // Orange text when enabled but not watching
+        else -> Color(0xFFB3261E)  // Red text when disabled
     }
 
     Card(
@@ -190,6 +204,8 @@ fun StatusCard(
             // Animated Status Circle
             AnimatedStatusCircle(
                 isActive = isServiceEnabled,
+                isYouTubeActive = isYouTubeActive,
+                circleColor = statusColor,
                 modifier = Modifier
                     .size(120.dp)
             )
@@ -202,7 +218,7 @@ fun StatusCard(
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold
                 ),
-                color = statusColor
+                color = textColor
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -213,6 +229,16 @@ fun StatusCard(
                 color = statusColor.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center
             )
+
+            if (isServiceEnabled && isYouTubeActive) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "▶ YouTube Status: Watching",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color(0xFF22C55E),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
     }
 }
@@ -220,14 +246,12 @@ fun StatusCard(
 @Composable
 fun AnimatedStatusCircle(
     isActive: Boolean,
+    isYouTubeActive: Boolean,
+    circleColor: Color,
     modifier: Modifier = Modifier
 ) {
     val backgroundColor by animateColorAsState(
-        targetValue = if (isActive) {
-            MaterialTheme.colorScheme.primary
-        } else {
-            MaterialTheme.colorScheme.error
-        }
+        targetValue = circleColor
     )
 
     Box(
@@ -238,7 +262,11 @@ fun AnimatedStatusCircle(
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = if (isActive) "✓" else "✕",
+            text = if (isActive) {
+                if (isYouTubeActive) "▶" else "✓"
+            } else {
+                "✕"
+            },
             color = Color.White,
             fontSize = 60.sp,
             fontWeight = FontWeight.Bold
@@ -292,6 +320,8 @@ fun StatsCard(
     totalAdsSkipped: Int,
     modifier: Modifier = Modifier
 ) {
+    val todayAds = 47  // Example value - can be made dynamic
+    
     Card(
         modifier = modifier
             .shadow(elevation = 4.dp, shape = RoundedCornerShape(20.dp))
@@ -300,36 +330,65 @@ fun StatsCard(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = stringResource(R.string.total_ads_skipped_title),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Total Ads Skipped",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = totalAdsSkipped.toString(),
+                    style = MaterialTheme.typography.displayMedium.copy(
+                        fontSize = 42.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    ),
+                    color = Color(0xFFFFA500)  // Golden color
+                )
 
-            Text(
-                text = totalAdsSkipped.toString(),
-                style = MaterialTheme.typography.displayLarge.copy(
-                    fontSize = 48.sp,
-                    fontWeight = FontWeight.ExtraBold
-                ),
-                color = MaterialTheme.colorScheme.primary
-            )
+                Text(
+                    text = "all-time",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "all-time",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFFFF3E0)),  // Light golden background
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text(
+                        text = "+$todayAds",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
+                        ),
+                        color = Color(0xFFFFA500)
+                    )
+                    Text(
+                        text = "today",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFFFA500).copy(alpha = 0.7f)
+                    )
+                }
+            }
         }
     }
 }
@@ -376,6 +435,7 @@ fun HomeScreenPreview() {
     AdSkipperTheme {
         HomeScreenContent(
             isServiceEnabled = true,
+            isYouTubeActive = true,
             totalAdsSkipped = 1247,
             onNavigateToSettings = {},
             onNavigateToHowItWorks = {}

@@ -17,8 +17,8 @@ import com.evolvarc.adskipper.R
 enum class NavigationItem(val route: String, val label: Int, val icon: ImageVector) {
     HOME("home", R.string.nav_home, Icons.Filled.Home),
     HOW_IT_WORKS("how_it_works", R.string.nav_how_it_works, Icons.Filled.Info),
-    SETTINGS("settings", R.string.nav_settings, Icons.Filled.Settings),
-    SUBSCRIPTION("subscription", R.string.nav_subscription, Icons.Filled.Star)
+    SUBSCRIPTION("subscription", R.string.nav_subscription, Icons.Filled.Star),
+    SETTINGS("settings", R.string.nav_settings, Icons.Filled.Settings)
 }
 
 @Composable

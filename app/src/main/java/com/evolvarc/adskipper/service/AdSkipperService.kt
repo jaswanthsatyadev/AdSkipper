@@ -94,23 +94,51 @@ class AdSkipperService : AccessibilityService() {
                 }
             }
 
-            // Start foreground service with notification
-            serviceScope.launch {
-                try {
-                    if (userDataStore.showNotification.first()) {
-                        NotificationManager.createNotificationChannel(this@AdSkipperService)
-                        val adsSkipped = userDataStore.totalAdsSkipped.first()
-                        val notification = NotificationManager.getNotification(this@AdSkipperService, adsSkipped)
-                        startForeground(NOTIFICATION_ID, notification)
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error starting foreground service: ${e.message}", e)
-                }
-            }
-            
-            Log.d(TAG, "Accessibility service initialized successfully")
+            // Don't show notification on service connection - only show when YouTube is active
+            // The notification will be started in handleAppActivated() when YouTube is detected
+            Log.d(TAG, "Accessibility service initialized successfully (notification deferred until YouTube active)")
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing accessibility service: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Start showing the foreground notification when YouTube app becomes active
+     */
+    private fun showForegroundNotification(appName: String) {
+        serviceScope.launch {
+            try {
+                if (userDataStore.showNotification.first()) {
+                    NotificationManager.createNotificationChannel(this@AdSkipperService)
+                    val adsSkipped = userDataStore.totalAdsSkipped.first()
+                    val notification = NotificationManager.getNotificationActive(
+                        this@AdSkipperService,
+                        adsSkipped,
+                        appName
+                    )
+                    startForeground(NOTIFICATION_ID, notification)
+                    Log.d(TAG, "Foreground notification started for $appName")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error starting foreground notification: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * Hide the foreground notification when YouTube app is closed
+     */
+    private fun hideForegroundNotification() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+            Log.d(TAG, "Foreground notification hidden")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error hiding notification: ${e.message}", e)
         }
     }
 
@@ -185,15 +213,13 @@ class AdSkipperService : AccessibilityService() {
             unmuteAudio()
         }
         
-        // Update notification to show we're watching this app
-        serviceScope.launch {
-            val appName = when (packageName) {
-                "com.google.android.youtube" -> "YouTube"
-                else -> packageName.substringAfterLast('.')
-            }
-            Log.d(TAG, "Now monitoring: $appName for ads")
-            updateNotificationForApp(appName)
+        // Show foreground notification with app name
+        val appName = when (packageName) {
+            "com.google.android.youtube" -> "YouTube"
+            else -> packageName.substringAfterLast('.')
         }
+        showForegroundNotification(appName)
+        Log.d(TAG, "Now monitoring: $appName for ads")
     }
     
     /**
@@ -209,21 +235,9 @@ class AdSkipperService : AccessibilityService() {
             unmuteAudio()
         }
         
-        // Hide notification when app is not active
-        serviceScope.launch {
-            Log.d(TAG, "Stopped monitoring - removing notification")
-            try {
-                // Stop showing foreground notification and remove it completely
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                } else {
-                    @Suppress("DEPRECATION")
-                    stopForeground(true)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error hiding notification: ${e.message}")
-            }
-        }
+        // Hide foreground notification
+        hideForegroundNotification()
+        Log.d(TAG, "Notification removed - app is no longer active")
     }
 
     private suspend fun findAndClickButton(node: AccessibilityNodeInfo) {
