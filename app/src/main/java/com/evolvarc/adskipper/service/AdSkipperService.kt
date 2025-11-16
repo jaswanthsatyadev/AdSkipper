@@ -148,6 +148,8 @@ class AdSkipperService : AccessibilityService() {
 
 
     private suspend fun findAndClickButton(node: AccessibilityNodeInfo) {
+        val searchStartTime = SystemClock.uptimeMillis()
+        
         // Check if we just clicked recently - prevent rapid repeated clicks
         val currentTime = SystemClock.uptimeMillis()
         if (currentTime - lastClickTime < MIN_CLICK_INTERVAL) {
@@ -164,29 +166,49 @@ class AdSkipperService : AccessibilityService() {
         // Layer 1: Search by View ID - com.google.android.youtube:id/skip_ad_button
         val layer1Nodes = node.findAccessibilityNodeInfosByViewId("com.google.android.youtube:id/skip_ad_button")
         if (layer1Nodes.isNotEmpty()) {
-            Log.d(TAG, "Layer 1: Found skip button by ID 'skip_ad_button'")
+            val searchTime = SystemClock.uptimeMillis() - searchStartTime
+            Log.d(TAG, "⚡ Layer 1: Found skip button in ${searchTime}ms (View ID: skip_ad_button)")
             clickAndHandleAudio(layer1Nodes[0], "View ID: skip_ad_button")
             layer1Nodes.forEach { it.recycle() }
-            return
+            return  // Early exit - fastest path
         }
 
         // Layer 2: Search by View ID - com.google.android.youtube:id/skip_button
         val layer2Nodes = node.findAccessibilityNodeInfosByViewId("com.google.android.youtube:id/skip_button")
         if (layer2Nodes.isNotEmpty()) {
-            Log.d(TAG, "Layer 2: Found skip button by ID 'skip_button'")
+            val searchTime = SystemClock.uptimeMillis() - searchStartTime
+            Log.d(TAG, "⚡ Layer 2: Found skip button in ${searchTime}ms (View ID: skip_button)")
             clickAndHandleAudio(layer2Nodes[0], "View ID: skip_button")
             layer2Nodes.forEach { it.recycle() }
-            return
+            return  // Early exit
         }
 
         // Layer 3: Text-based search - Multiple variations for different devices/languages
         val skipTexts = listOf(
+            // English
             "Skip Ad", "Skip ad", "SKIP AD",
             "Skip Ads", "Skip ads", "SKIP ADS",
-            "Skip", "SKIP",  // Generic skip for some YouTube versions
-            "Pular anúncio", "Pular",  // Portuguese
-            "Saltar anuncio", "Saltar",  // Spanish
-            "Anzeige überspringen", "Überspringen"  // German
+            "Skip", "SKIP",
+            // Portuguese
+            "Pular anúncio", "Pular",
+            // Spanish
+            "Saltar anuncio", "Saltar",
+            // German
+            "Anzeige überspringen", "Überspringen",
+            // French
+            "Ignorer l'annonce", "Ignorer", "Passer",
+            // Italian
+            "Salta annuncio", "Salta", "Ignora",
+            // Dutch
+            "Advertentie overslaan", "Overslaan",
+            // Hindi
+            "विज्ञापन छोड़ें", "छोड़ें",
+            // Japanese
+            "広告をスキップ", "スキップ",
+            // Korean
+            "광고 건너뛰기", "건너뛰기",
+            // Arabic
+            "تخطي الإعلان", "تخطي"
         )
         for (text in skipTexts) {
             val layer3Nodes = node.findAccessibilityNodeInfosByText(text)
@@ -228,36 +250,11 @@ class AdSkipperService : AccessibilityService() {
             }
         }
         
-        // Layer 5: Fuzzy text search - Search for any node containing "skip" that's clickable
-        val fuzzyNodes = node.findAccessibilityNodeInfosByText("skip")
-        if (fuzzyNodes.isNotEmpty()) {
-            for (fuzzyNode in fuzzyNodes) {
-                if (fuzzyNode.isClickable || fuzzyNode.parent?.isClickable == true) {
-                    val clickTarget = if (fuzzyNode.isClickable) fuzzyNode else fuzzyNode.parent
-                    clickTarget?.let {
-                        // Must be in top portion of screen (ads are typically at top)
-                        val rect = Rect()
-                        it.getBoundsInScreen(rect)
-                        val displayMetrics = resources.displayMetrics
-                        val screenHeight = displayMetrics.heightPixels
-                        
-                        if (rect.centerY() < screenHeight * 0.5) {
-                            Log.d(TAG, "Layer 5: Found skip button by fuzzy search")
-                            clickAndHandleAudio(it, "Fuzzy search: skip")
-                            fuzzyNodes.forEach { n -> n.recycle() }
-                            return
-                        }
-                    }
-                }
-            }
-            fuzzyNodes.forEach { it.recycle() }
-        }
-
-        // Layer 4 & 5: DISABLED to prevent false positives
-        // These layers are too aggressive and click random UI elements
-        // Only Layers 1-3 are safe enough for production use
+        // Layer 5: DISABLED - Fuzzy search is too aggressive
+        // It can click on wrong buttons like "Skip intro", "Skip to next video", etc.
+        // Only Layers 1-4 (View ID, Text matching, Content Description) are safe
         
-        Log.d(TAG, "No skip button found in safe detection layers (1-3)")
+        Log.d(TAG, "No skip button found in safe detection layers (1-4)")
 
         Log.d(TAG, "No skip button found in any layer")
     }
@@ -285,13 +282,8 @@ class AdSkipperService : AccessibilityService() {
             }
         }
         
-        // Also check for "Skip" text which strongly suggests an ad
-        val skipTexts = node.findAccessibilityNodeInfosByText("Skip")
-        if (skipTexts.isNotEmpty()) {
-            skipTexts.forEach { it.recycle() }
-            Log.d(TAG, "Ad context confirmed - found 'Skip' text")
-            return true
-        }
+        // REMOVED: Generic "Skip" text check - too prone to false positives
+        // Only rely on specific ad-related view IDs and text
         
         Log.d(TAG, "No ad context detected")
         return false
@@ -334,17 +326,59 @@ class AdSkipperService : AccessibilityService() {
         return false
     }
 
-    private fun findNodeByContentDescription(node: AccessibilityNodeInfo?, searchText: String): AccessibilityNodeInfo? {
+        private fun checkForAdIndicators(node: AccessibilityNodeInfo?): Boolean {
+        if (node == null) return false
+        
+        // Look for ad-related text or content that indicates an ad is playing
+        val adIndicators = listOf(
+            "ad", "advertisement", "sponsored",
+            "skip ad", "skip ads", "video will play",
+            "you can skip", "advertisement will end"
+        )
+        
+        fun searchNode(n: AccessibilityNodeInfo?): Boolean {
+            if (n == null) return false
+            
+            val text = n.text?.toString()?.lowercase() ?: ""
+            val contentDesc = n.contentDescription?.toString()?.lowercase() ?: ""
+            val viewId = n.viewIdResourceName?.lowercase() ?: ""
+            
+            // Check if any ad indicator is present
+            for (indicator in adIndicators) {
+                if (text.contains(indicator) || contentDesc.contains(indicator) || viewId.contains("ad")) {
+                    return true
+                }
+            }
+            
+            // Recursively check children
+            for (i in 0 until n.childCount) {
+                val child = n.getChild(i)
+                if (child != null) {
+                    if (searchNode(child)) {
+                        child.recycle()
+                        return true
+                    }
+                    child.recycle()
+                }
+            }
+            
+            return false
+        }
+        
+        return searchNode(node)
+    }
+    
+    private fun findNodeByContentDescription(node: AccessibilityNodeInfo?, description: String): AccessibilityNodeInfo? {
         if (node == null) return null
 
         val contentDesc = node.contentDescription?.toString()?.lowercase()
-        if (contentDesc != null && contentDesc.contains(searchText.lowercase()) && node.isClickable) {
+        if (contentDesc != null && contentDesc.contains(description.lowercase()) && node.isClickable) {
             return node
         }
 
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            val result = findNodeByContentDescription(child, searchText)
+            val result = findNodeByContentDescription(child, description)
             if (result != null) {
                 child.recycle()
                 return result
@@ -452,9 +486,16 @@ class AdSkipperService : AccessibilityService() {
                     }
                 }
                 
-                // Update statistics
-                userDataStore.incrementTotalAdsSkipped()
-                userDataStore.addTimeSaved(5) // Assume 5 seconds saved per ad
+                // Update statistics (ensure completion with proper coroutine scope)
+                serviceScope.launch {
+                    try {
+                        userDataStore.incrementTotalAdsSkipped()
+                        userDataStore.addTimeSaved(5) // Assume 5 seconds saved per ad
+                        Log.d(TAG, "✅ Stats updated: counter incremented, 5s saved")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error updating stats: ${e.message}", e)
+                    }
+                }
 
                 updateNotification()
                 

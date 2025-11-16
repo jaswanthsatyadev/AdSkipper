@@ -203,15 +203,15 @@ fun StatusCard(
     modifier: Modifier = Modifier
 ) {
     val statusText = when {
-        !isServiceEnabled -> "Disabled"
-        isYouTubeActive -> "Active"
-        else -> "Enabled"
+        !isServiceEnabled -> "Service Disabled"
+        isYouTubeActive -> "Actively Skipping"
+        else -> "Ready"
     }
 
     val statusSubtext = when {
-        !isServiceEnabled -> stringResource(R.string.waiting_for_app)
-        isYouTubeActive -> "Currently watching YouTube"
-        else -> "Ready to skip ads"
+        !isServiceEnabled -> "Enable accessibility service to start"
+        isYouTubeActive -> "Watching YouTube • Auto-skipping ads"
+        else -> "Monitoring for YouTube ads"
     }
 
     val backgroundColor = when {
@@ -365,35 +365,63 @@ fun WarningBanner(
 ) {
     Card(
         modifier = modifier
-            .shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp)),
+            .shadow(elevation = 6.dp, shape = RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(18.dp)),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
+            containerColor = Color(0xFFFEF2F2)  // Light red background
         )
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = stringResource(R.string.enable_accessibility),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.error,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = onEnableClick,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                ),
-                modifier = Modifier.fillMaxWidth()
+            // Alert icon
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFEF4444)),
+                contentAlignment = Alignment.Center
             ) {
-                Text(stringResource(R.string.enable_now))
+                Text(
+                    text = "⚠️",
+                    fontSize = 24.sp
+                )
+            }
+            
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Service Not Enabled",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = Color(0xFFDC2626)
+                )
+                
+                Text(
+                    text = "Enable accessibility service to start auto-skipping ads",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF991B1B)
+                )
+
+                Button(
+                    onClick = onEnableClick,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFEF4444)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Enable Now",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
@@ -404,8 +432,6 @@ fun StatsCard(
     totalAdsSkipped: Int,
     modifier: Modifier = Modifier
 ) {
-    val todayAds = 47  // Example value - can be made dynamic
-    
     // Animate the counter value
     val animatedCount = androidx.compose.runtime.remember { Animatable(0f) }
     
@@ -433,69 +459,65 @@ fun StatsCard(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Text(
+                text = "Total Ads Skipped",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            AnimatedContent(
+                targetState = animatedCount.value.toInt(),
+                label = "counterAnimation"
+            ) { count ->
                 Text(
-                    text = "Total Ads Skipped",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = count.toString(),
+                    style = MaterialTheme.typography.displayLarge.copy(
+                        fontSize = 56.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    ),
+                    color = Color(0xFFFFA500)  // Golden color
                 )
+            }
 
-                AnimatedContent(
-                    targetState = animatedCount.value.toInt(),
-                    label = "counterAnimation"
-                ) { count ->
-                    Text(
-                        text = count.toString(),
-                        style = MaterialTheme.typography.displayMedium.copy(
-                            fontSize = 42.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        ),
-                        color = Color(0xFFFFA500)  // Golden color
-                    )
-                }
-
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF22C55E))
+                )
+                
                 Text(
-                    text = "all-time",
-                    style = MaterialTheme.typography.labelSmall,
+                    text = "all-time total",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFFFF3E0)),  // Light golden background
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Text(
-                        text = "+$todayAds",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp
-                        ),
-                        color = Color(0xFFFFA500)
-                    )
-                    Text(
-                        text = "today",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFFFFA500).copy(alpha = 0.7f)
-                    )
-                }
+            val timeSaved = totalAdsSkipped * 5 // ~5 seconds per ad
+            val minutesSaved = timeSaved / 60
+            
+            if (minutesSaved > 0) {
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = "⏱️ ~$minutesSaved minutes saved",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color(0xFFFFA500).copy(alpha = 0.8f),
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }
