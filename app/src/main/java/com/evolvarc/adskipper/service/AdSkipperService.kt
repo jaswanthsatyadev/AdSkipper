@@ -13,6 +13,7 @@ import android.os.VibratorManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.widget.Toast
 import com.evolvarc.adskipper.data.UserDataStore
 import com.evolvarc.adskipper.notification.NotificationManager
 import com.evolvarc.adskipper.receivers.ServiceControlReceiver
@@ -178,23 +179,30 @@ class AdSkipperService : AccessibilityService() {
             return
         }
 
-        // Layer 3: Text-based search - ONLY for "Skip Ad" (more specific)
-        // Avoid generic "Skip" to prevent clicking wrong buttons
-        val skipTexts = listOf("Skip Ad", "Skip ad", "SKIP AD")
+        // Layer 3: Text-based search - Multiple variations for different devices/languages
+        val skipTexts = listOf(
+            "Skip Ad", "Skip ad", "SKIP AD",
+            "Skip Ads", "Skip ads", "SKIP ADS",
+            "Skip", "SKIP",  // Generic skip for some YouTube versions
+            "Pular anúncio", "Pular",  // Portuguese
+            "Saltar anuncio", "Saltar",  // Spanish
+            "Anzeige überspringen", "Überspringen"  // German
+        )
         for (text in skipTexts) {
             val layer3Nodes = node.findAccessibilityNodeInfosByText(text)
             if (layer3Nodes.isNotEmpty()) {
                 for (textNode in layer3Nodes) {
                     // Must be clickable or have clickable parent
                     if (textNode.isClickable || textNode.parent?.isClickable == true) {
-                        // Additional validation: must be a Button type
-                        val className = (if (textNode.isClickable) textNode else textNode.parent)?.className?.toString() ?: ""
-                        if (className.contains("Button", ignoreCase = true)) {
-                            Log.d(TAG, "Layer 3: Found skip button by text '$text'")
-                            val clickTarget = if (textNode.isClickable) textNode else textNode.parent
-                            clickTarget?.let {
+                        val clickTarget = if (textNode.isClickable) textNode else textNode.parent
+                        clickTarget?.let {
+                            // Validate it's actually a button and in reasonable position
+                            val className = it.className?.toString() ?: ""
+                            if (className.contains("Button", ignoreCase = true) || 
+                                className.contains("View", ignoreCase = true)) {
+                                Log.d(TAG, "Layer 3: Found skip button by text '$text'")
                                 clickAndHandleAudio(it, "Text: $text")
-                                layer3Nodes.forEach { it.recycle() }
+                                layer3Nodes.forEach { n -> n.recycle() }
                                 return
                             }
                         }
@@ -202,6 +210,47 @@ class AdSkipperService : AccessibilityService() {
                 }
                 layer3Nodes.forEach { it.recycle() }
             }
+        }
+        
+        // Layer 4: Content Description search (for accessibility-enabled devices)
+        val contentDescriptions = listOf(
+            "Skip ad", "Skip Ad", "Skip",
+            "Skip ads", "Skip Ads",
+            "Advertisement skip", "Ad skip"
+        )
+        for (desc in contentDescriptions) {
+            val descNode = findNodeByContentDescription(node, desc)
+            if (descNode != null) {
+                Log.d(TAG, "Layer 4: Found skip button by content description '$desc'")
+                clickAndHandleAudio(descNode, "Content Desc: $desc")
+                descNode.recycle()
+                return
+            }
+        }
+        
+        // Layer 5: Fuzzy text search - Search for any node containing "skip" that's clickable
+        val fuzzyNodes = node.findAccessibilityNodeInfosByText("skip")
+        if (fuzzyNodes.isNotEmpty()) {
+            for (fuzzyNode in fuzzyNodes) {
+                if (fuzzyNode.isClickable || fuzzyNode.parent?.isClickable == true) {
+                    val clickTarget = if (fuzzyNode.isClickable) fuzzyNode else fuzzyNode.parent
+                    clickTarget?.let {
+                        // Must be in top portion of screen (ads are typically at top)
+                        val rect = Rect()
+                        it.getBoundsInScreen(rect)
+                        val displayMetrics = resources.displayMetrics
+                        val screenHeight = displayMetrics.heightPixels
+                        
+                        if (rect.centerY() < screenHeight * 0.5) {
+                            Log.d(TAG, "Layer 5: Found skip button by fuzzy search")
+                            clickAndHandleAudio(it, "Fuzzy search: skip")
+                            fuzzyNodes.forEach { n -> n.recycle() }
+                            return
+                        }
+                    }
+                }
+            }
+            fuzzyNodes.forEach { it.recycle() }
         }
 
         // Layer 4 & 5: DISABLED to prevent false positives
@@ -389,6 +438,19 @@ class AdSkipperService : AccessibilityService() {
                 
                 // Update last click timestamp to prevent rapid repeated clicks
                 lastClickTime = SystemClock.uptimeMillis()
+                
+                // Show "Skipped ad for you ;)" toast message
+                serviceScope.launch(Dispatchers.Main) {
+                    try {
+                        Toast.makeText(
+                            this@AdSkipperService,
+                            "Skipped ad for you ;)",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error showing toast: ${e.message}")
+                    }
+                }
                 
                 // Update statistics
                 userDataStore.incrementTotalAdsSkipped()

@@ -10,16 +10,39 @@
 /.idea/assetWizardSettings.xml
 .DS_Store
 
-# Build folder
+# Build folders
 /build
 /app/build
+/buildSrc/build
+/.gradle
+
+# APK and Bundle files
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Release builds
+/app/release/
+/app/debug/
+/app/*.apk
+/app/*.aab
+
+# Outputs
+/app/outputs/
+/app/build/outputs/
+*.hprof
 
 # Captures
 /captures
+.externalNativeBuild
+.cxx
 
 # Generated files
 .externalNativeBuild
 .cxx
+/app/build/generated/
+/app/build/intermediates/
 
 # Local properties
 local.properties
@@ -27,6 +50,8 @@ local.properties
 # Keystore files
 *.jks
 *.keystore
+release.jks
+debug.jks
 
 # Google services
 /app/google-services.json
@@ -39,3 +64,21 @@ local.properties
 /app/proguard/seeds.txt
 /app/proguard/usage.txt
 /app/ai_prompt.md
+
+# Lint
+lint-results*.xml
+lint-results*.html
+
+# NDK
+obj/
+.externalNativeBuild
+
+# Mac
+.DS_Store
+
+# Backup files
+*.bak
+*~
+
+# R8
+/app/build/outputs/mapping/
