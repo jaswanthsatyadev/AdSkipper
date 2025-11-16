@@ -3,7 +3,17 @@ package com.evolvarc.adskipper.ui.home
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -109,35 +119,69 @@ fun HomeScreenContent(
     ) {
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Status Card - Material 3 Expressive Design
-            StatusCard(
-                isServiceEnabled = isServiceEnabled,
-                isYouTubeActive = isYouTubeActive,
-                modifier = Modifier
-                    .fillMaxWidth(0.9f)
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Warning Banner if Service Disabled
-            if (!isServiceEnabled) {
-                WarningBanner(
-                    onEnableClick = {
-                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                        context.startActivity(intent)
-                    },
+            // Status Card - Material 3 Expressive Design with fade-in animation
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn(animationSpec = tween(600)) + slideInVertically(
+                    initialOffsetY = { -40 },
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                )
+            ) {
+                StatusCard(
+                    isServiceEnabled = isServiceEnabled,
+                    isYouTubeActive = isYouTubeActive,
                     modifier = Modifier
                         .fillMaxWidth(0.9f)
                 )
-                Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // Stats Card
-            StatsCard(
-                totalAdsSkipped = totalAdsSkipped,
-                modifier = Modifier
-                    .fillMaxWidth(0.9f)
-            )
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Warning Banner if Service Disabled with smooth animation
+            AnimatedVisibility(
+                visible = !isServiceEnabled,
+                enter = fadeIn(animationSpec = tween(400)) + slideInVertically(
+                    initialOffsetY = { -20 },
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+                ),
+                exit = fadeOut(animationSpec = tween(300)) + slideOutVertically(
+                    targetOffsetY = { -20 },
+                    animationSpec = tween(300)
+                )
+            ) {
+                Column {
+                    WarningBanner(
+                        onEnableClick = {
+                            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f)
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+
+            // Stats Card with fade-in animation
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn(animationSpec = tween(600, delayMillis = 150)) + slideInVertically(
+                    initialOffsetY = { -40 },
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                )
+            ) {
+                StatsCard(
+                    totalAdsSkipped = totalAdsSkipped,
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -251,26 +295,66 @@ fun AnimatedStatusCircle(
     modifier: Modifier = Modifier
 ) {
     val backgroundColor by animateColorAsState(
-        targetValue = circleColor
+        targetValue = circleColor,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "statusCircleColor"
     )
+
+    // Pulsing animation for active state
+    val scale = androidx.compose.runtime.remember { Animatable(1f) }
+    
+    LaunchedEffect(isYouTubeActive) {
+        if (isYouTubeActive) {
+            scale.animateTo(
+                targetValue = 1.1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            )
+            scale.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
+        } else {
+            scale.snapTo(1f)
+        }
+    }
 
     Box(
         modifier = modifier
             .clip(CircleShape)
             .background(backgroundColor)
-            .padding(16.dp),
+            .padding(16.dp)
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = if (isActive) {
+        AnimatedContent(
+            targetState = if (isActive) {
                 if (isYouTubeActive) "▶" else "✓"
             } else {
                 "✕"
             },
-            color = Color.White,
-            fontSize = 60.sp,
-            fontWeight = FontWeight.Bold
-        )
+            label = "statusIcon"
+        ) { icon ->
+            Text(
+                text = icon,
+                color = Color.White,
+                fontSize = 60.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 
@@ -322,10 +406,29 @@ fun StatsCard(
 ) {
     val todayAds = 47  // Example value - can be made dynamic
     
+    // Animate the counter value
+    val animatedCount = androidx.compose.runtime.remember { Animatable(0f) }
+    
+    LaunchedEffect(totalAdsSkipped) {
+        animatedCount.animateTo(
+            targetValue = totalAdsSkipped.toFloat(),
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        )
+    }
+    
     Card(
         modifier = modifier
             .shadow(elevation = 4.dp, shape = RoundedCornerShape(20.dp))
-            .clip(RoundedCornerShape(20.dp)),
+            .clip(RoundedCornerShape(20.dp))
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
@@ -346,14 +449,19 @@ fun StatsCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Text(
-                    text = totalAdsSkipped.toString(),
-                    style = MaterialTheme.typography.displayMedium.copy(
-                        fontSize = 42.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    ),
-                    color = Color(0xFFFFA500)  // Golden color
-                )
+                AnimatedContent(
+                    targetState = animatedCount.value.toInt(),
+                    label = "counterAnimation"
+                ) { count ->
+                    Text(
+                        text = count.toString(),
+                        style = MaterialTheme.typography.displayMedium.copy(
+                            fontSize = 42.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        ),
+                        color = Color(0xFFFFA500)  // Golden color
+                    )
+                }
 
                 Text(
                     text = "all-time",

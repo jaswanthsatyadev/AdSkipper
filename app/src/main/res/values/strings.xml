@@ -53,7 +53,7 @@
     <string name="nav_home">Home</string>
     <string name="nav_how_it_works">How it works</string>
     <string name="nav_settings">Settings</string>
-    <string name="nav_subscription">Premium</string>
+    <string name="nav_about">About</string>
     
     <!-- Ad Skip Toast -->
     <string name="ad_skipped">Ad Skipper, skipped an ad for you ;)</string>

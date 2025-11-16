@@ -35,8 +35,6 @@ class AdSkipperService : AccessibilityService() {
     private val TAG = "AdSkipper_Service"
     private var lastEventTime = 0L
     private var lastClickTime = 0L
-    private var currentActiveApp: String? = null  // Track which app is currently active
-    private var isAppActive = false  // Track if service should be active
     private val serviceJob = Job()
     private val serviceScope = CoroutineScope(Dispatchers.Default + serviceJob)
 
@@ -49,18 +47,6 @@ class AdSkipperService : AccessibilityService() {
     
     // Prevent repeated clicking - minimum 5 seconds between clicks
     private val MIN_CLICK_INTERVAL = 5000L
-    
-    // List of apps that support ad detection
-    // Currently YouTube, but can easily add more apps (Facebook, Instagram, TikTok, etc.)
-    companion object {
-        private val MONITORED_APPS = setOf(
-            "com.google.android.youtube",  // YouTube
-            // Add more apps here in future:
-            // "com.facebook.katana",  // Facebook
-            // "com.instagram.android",  // Instagram
-            // "com.zhiliaoapp.musically",  // TikTok
-        )
-    }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -94,79 +80,37 @@ class AdSkipperService : AccessibilityService() {
                 }
             }
 
-            // Don't show notification on service connection - only show when YouTube is active
-            // The notification will be started in handleAppActivated() when YouTube is detected
-            Log.d(TAG, "Accessibility service initialized successfully (notification deferred until YouTube active)")
+            // Start foreground notification - service only runs when YouTube is active (packageNames config)
+            serviceScope.launch {
+                try {
+                    if (userDataStore.showNotification.first()) {
+                        NotificationManager.createNotificationChannel(this@AdSkipperService)
+                        val adsSkipped = userDataStore.totalAdsSkipped.first()
+                        val notification = NotificationManager.getNotificationActive(
+                            this@AdSkipperService,
+                            adsSkipped,
+                            "YouTube"
+                        )
+                        startForeground(NOTIFICATION_ID, notification)
+                        Log.d(TAG, "Foreground notification started")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error starting foreground notification: ${e.message}", e)
+                }
+            }
+            
+            Log.d(TAG, "Accessibility service initialized successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing accessibility service: ${e.message}", e)
         }
     }
 
-    /**
-     * Start showing the foreground notification when YouTube app becomes active
-     */
-    private fun showForegroundNotification(appName: String) {
-        serviceScope.launch {
-            try {
-                if (userDataStore.showNotification.first()) {
-                    NotificationManager.createNotificationChannel(this@AdSkipperService)
-                    val adsSkipped = userDataStore.totalAdsSkipped.first()
-                    val notification = NotificationManager.getNotificationActive(
-                        this@AdSkipperService,
-                        adsSkipped,
-                        appName
-                    )
-                    startForeground(NOTIFICATION_ID, notification)
-                    Log.d(TAG, "Foreground notification started for $appName")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error starting foreground notification: ${e.message}", e)
-            }
-        }
-    }
 
-    /**
-     * Hide the foreground notification when YouTube app is closed
-     */
-    private fun hideForegroundNotification() {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                stopForeground(STOP_FOREGROUND_REMOVE)
-            } else {
-                @Suppress("DEPRECATION")
-                stopForeground(true)
-            }
-            Log.d(TAG, "Foreground notification hidden")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error hiding notification: ${e.message}", e)
-        }
-    }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         try {
-            val packageName = event?.packageName?.toString() ?: return
-            
-            // Check if the event is from a monitored app
-            if (packageName !in MONITORED_APPS) {
-                // App is not monitored - check if we need to deactivate
-                if (isAppActive) {
-                    handleAppDeactivated(packageName)
-                }
-                return
-            }
-            
-            // We're in a monitored app
-            if (currentActiveApp != packageName) {
-                handleAppActivated(packageName)
-            }
-
-            // Only process accessibility events if the app should be active
-            if (!isAppActive) {
-                return
-            }
-
+            // Throttle events to reduce processing load
             val currentTime = SystemClock.uptimeMillis()
-            // Increase throttle to 2 seconds to reduce processing load
             if (currentTime - lastEventTime < 2000) {
                 return
             }
@@ -178,7 +122,7 @@ class AdSkipperService : AccessibilityService() {
                 return
             }
             
-            Log.d(TAG, "Processing $packageName accessibility event")
+            Log.d(TAG, "Processing YouTube accessibility event")
 
             serviceScope.launch {
                 try {
@@ -200,45 +144,7 @@ class AdSkipperService : AccessibilityService() {
         }
     }
     
-    /**
-     * Called when a monitored app becomes active (YouTube, etc.)
-     */
-    private fun handleAppActivated(packageName: String) {
-        isAppActive = true
-        currentActiveApp = packageName
-        Log.d(TAG, "App activated: $packageName - Service is now ACTIVE")
-        
-        // Restore original mute state and start fresh
-        if (isMuted) {
-            unmuteAudio()
-        }
-        
-        // Show foreground notification with app name
-        val appName = when (packageName) {
-            "com.google.android.youtube" -> "YouTube"
-            else -> packageName.substringAfterLast('.')
-        }
-        showForegroundNotification(appName)
-        Log.d(TAG, "Now monitoring: $appName for ads")
-    }
-    
-    /**
-     * Called when a monitored app becomes inactive (user switches away from YouTube)
-     */
-    private fun handleAppDeactivated(packageName: String) {
-        isAppActive = false
-        currentActiveApp = null
-        Log.d(TAG, "App deactivated: $packageName - Service is now IDLE")
-        
-        // Restore audio if muted
-        if (isMuted) {
-            unmuteAudio()
-        }
-        
-        // Hide foreground notification
-        hideForegroundNotification()
-        Log.d(TAG, "Notification removed - app is no longer active")
-    }
+
 
     private suspend fun findAndClickButton(node: AccessibilityNodeInfo) {
         // Check if we just clicked recently - prevent rapid repeated clicks

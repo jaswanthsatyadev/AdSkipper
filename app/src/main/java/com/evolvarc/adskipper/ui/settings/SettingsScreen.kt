@@ -80,66 +80,46 @@ import com.evolvarc.adskipper.utils.AppUtils
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
-    paddingValues: PaddingValues = PaddingValues(),
-    onNavigateUp: () -> Unit
+    paddingValues: PaddingValues = PaddingValues()
 ) {
     val isVibrateOnSkipEnabled by viewModel.vibrateOnSkip.collectAsStateWithLifecycle()
     val isShowNotificationEnabled by viewModel.showNotification.collectAsStateWithLifecycle()
     val skipDelay by viewModel.skipDelay.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Settings",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight = FontWeight.Bold
-                        )
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
-                )
-            )
-        }
-    ) { scaffoldPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(scaffoldPadding),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = 12.dp,
-                bottom = 24.dp + paddingValues.calculateBottomPadding()
-            )
-        ) {
-            item {
-                ServiceSettingsSection(
-                    isVibrateOnSkipEnabled = isVibrateOnSkipEnabled,
-                    isShowNotificationEnabled = isShowNotificationEnabled,
-                    skipDelay = skipDelay,
-                    onVibrateOnSkipChanged = { viewModel.setVibrateOnSkip(it) },
-                    onShowNotificationChanged = { viewModel.setShowNotification(it) },
-                    onSkipDelayChanged = { viewModel.setSkipDelay(it) }
-                )
-            }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        Spacer(modifier = Modifier.height(8.dp))
 
-            item {
-                AboutSection()
-            }
-        }
+        // Settings Title
+        Text(
+            text = "Settings",
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 28.sp
+            ),
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        ServiceSettingsSection(
+            isVibrateOnSkipEnabled = isVibrateOnSkipEnabled,
+            isShowNotificationEnabled = isShowNotificationEnabled,
+            skipDelay = skipDelay,
+            onVibrateOnSkipChanged = { viewModel.setVibrateOnSkip(it) },
+            onShowNotificationChanged = { viewModel.setShowNotification(it) },
+            onSkipDelayChanged = { viewModel.setSkipDelay(it) }
+        )
+
+        AboutSection()
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -515,6 +495,6 @@ fun AboutItemCard(
 @Composable
 fun SettingsScreenPreview() {
     AdSkipperTheme {
-        SettingsScreen(onNavigateUp = {})
+        SettingsScreen()
     }
 }

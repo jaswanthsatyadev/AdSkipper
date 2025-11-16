@@ -25,12 +25,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.evolvarc.adskipper.data.UserDataStore
 import com.evolvarc.adskipper.receivers.AdSkippedReceiver
+import com.evolvarc.adskipper.ui.about.AboutScreen
 import com.evolvarc.adskipper.ui.home.HomeScreen
 import com.evolvarc.adskipper.ui.howitworks.HowItWorksScreen
 import com.evolvarc.adskipper.ui.navigation.BottomNavigationBar
 import com.evolvarc.adskipper.ui.onboarding.OnboardingScreen
 import com.evolvarc.adskipper.ui.settings.SettingsScreen
-import com.evolvarc.adskipper.ui.subscription.SubscriptionScreen
 import com.evolvarc.adskipper.ui.theme.AdSkipperTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -132,11 +132,11 @@ fun MainAppScreen() {
             composable("how_it_works") {
                 HowItWorksScreen(paddingValues = paddingValues)
             }
-            composable("subscription") {
-                SubscriptionScreen(paddingValues = paddingValues)
-            }
             composable("settings") {
-                SettingsScreen(paddingValues = paddingValues, onNavigateUp = { navController.navigateUp() })
+                SettingsScreen(paddingValues = paddingValues)
+            }
+            composable("about") {
+                AboutScreen(paddingValues = paddingValues)
             }
         }
     }

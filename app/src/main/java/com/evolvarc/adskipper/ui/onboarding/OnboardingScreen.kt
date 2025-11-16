@@ -4,6 +4,18 @@ import android.Manifest
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -60,7 +72,26 @@ fun OnboardingScreen(
 ) {
     val step by viewModel.onboardingStep.collectAsStateWithLifecycle()
 
-    AnimatedContent(targetState = step) {
+    AnimatedContent(
+        targetState = step,
+        transitionSpec = {
+            (fadeIn(animationSpec = tween(400)) + 
+             slideInHorizontally(
+                 initialOffsetX = { fullWidth -> fullWidth },
+                 animationSpec = spring(
+                     dampingRatio = Spring.DampingRatioMediumBouncy,
+                     stiffness = Spring.StiffnessMedium
+                 )
+             )).togetherWith(
+                fadeOut(animationSpec = tween(200)) + 
+                slideOutHorizontally(
+                    targetOffsetX = { fullWidth -> -fullWidth },
+                    animationSpec = tween(200)
+                )
+            )
+        },
+        label = "onboardingStep"
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -87,91 +118,158 @@ fun WelcomeStep(onNext: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Large Crown Icon
-        Text(
-            text = "👑",
-            style = MaterialTheme.typography.displayLarge.copy(fontSize = 80.sp),
-            modifier = Modifier.padding(vertical = 16.dp)
-        )
+        // Large Crown Icon with fade-in animation
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(800)) + 
+                    slideInVertically(
+                        initialOffsetY = { -100 },
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
+        ) {
+            Text(
+                text = "👑",
+                style = MaterialTheme.typography.displayLarge.copy(fontSize = 80.sp),
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
+        }
 
-        // Headline
-        Text(
-            text = "Welcome to AdSkipper",
-            style = MaterialTheme.typography.headlineLarge.copy(
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 32.sp
-            ),
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        // Headline with fade-in
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(600, delayMillis = 200)) + 
+                    slideInVertically(
+                        initialOffsetY = { -50 },
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+                    )
+        ) {
+            Text(
+                text = "Welcome to AdSkipper",
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 32.sp
+                ),
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Description
-        Text(
-            text = "Automatically skip YouTube ads and reclaim your viewing time",
-            style = MaterialTheme.typography.bodyLarge.copy(
-                fontSize = 16.sp,
-                lineHeight = 24.sp
-            ),
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(40.dp))
-
-        // Feature Cards
-        FeatureHighlightCard(
-            icon = "⚡",
-            title = "Ultra Fast",
-            description = "Skip ads in milliseconds"
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        FeatureHighlightCard(
-            icon = "🎯",
-            title = "100% Accurate",
-            description = "Never clicks the wrong button"
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        FeatureHighlightCard(
-            icon = "🔒",
-            title = "Private & Secure",
-            description = "Your data stays on your device"
-        )
-
-        Spacer(modifier = Modifier.height(40.dp))
-
-        // CTA Button
-        Button(
-            onClick = onNext,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            ),
-            shape = RoundedCornerShape(12.dp)
+        // Description with fade-in
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(600, delayMillis = 300))
         ) {
             Text(
-                text = "Get Started",
-                style = MaterialTheme.typography.labelLarge,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
+                text = "Automatically skip YouTube ads and reclaim your viewing time",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = 16.sp,
+                    lineHeight = 24.sp
+                ),
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        // Feature Cards with staggered animation
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(500, delayMillis = 400)) + 
+                    slideInVertically(
+                        initialOffsetY = { 40 },
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+                    )
+        ) {
+            FeatureHighlightCard(
+                icon = "⚡",
+                title = "Ultra Fast",
+                description = "Skip ads in milliseconds"
             )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Skip onboarding option
-        FilledTonalButton(
-            onClick = onNext,
-            modifier = Modifier.fillMaxWidth()
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(500, delayMillis = 500)) + 
+                    slideInVertically(
+                        initialOffsetY = { 40 },
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+                    )
         ) {
-            Text("Skip")
+            FeatureHighlightCard(
+                icon = "🎯",
+                title = "100% Accurate",
+                description = "Never clicks the wrong button"
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(500, delayMillis = 600)) + 
+                    slideInVertically(
+                        initialOffsetY = { 40 },
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+                    )
+        ) {
+            FeatureHighlightCard(
+                icon = "🔒",
+                title = "Private & Secure",
+                description = "Your data stays on your device"
+            )
+        }
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        // CTA Button with fade-in
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(500, delayMillis = 700)) + 
+                    slideInVertically(
+                        initialOffsetY = { 40 },
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+                    )
+        ) {
+            Button(
+                onClick = onNext,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "Get Started",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Skip onboarding option with fade-in
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(500, delayMillis = 800))
+        ) {
+            FilledTonalButton(
+                onClick = onNext,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Skip")
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -189,7 +287,13 @@ fun FeatureHighlightCard(
         modifier = modifier
             .fillMaxWidth()
             .shadow(elevation = 4.dp, shape = RoundedCornerShape(12.dp))
-            .clip(RoundedCornerShape(12.dp)),
+            .clip(RoundedCornerShape(12.dp))
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
