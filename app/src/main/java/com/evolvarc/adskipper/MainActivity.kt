@@ -100,7 +100,8 @@ class MainActivity : ComponentActivity() {
     
     override fun onDestroy() {
         super.onDestroy()
-        unregisterReceiver(adSkippedReceiver)
+        // DISABLED: Notification functionality temporarily disabled
+        // unregisterReceiver(adSkippedReceiver)
     }
 }
 

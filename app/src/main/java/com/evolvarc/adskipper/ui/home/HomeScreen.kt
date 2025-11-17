@@ -10,12 +10,23 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -215,19 +226,19 @@ fun StatusCard(
     }
 
     val backgroundColor = when {
-        isServiceEnabled -> Color(0xFFE8E0FF)  // Light purple background when enabled
-        else -> Color(0xFFFFE8E8)  // Light red background when disabled
+        isServiceEnabled -> Color(0xFF4CAF50)  // Material Green when enabled
+        else -> Color(0xFFEF5350)  // Material Red when disabled
     }
 
     val statusColor = when {
-        isServiceEnabled -> Color(0xFF6750A4)  // Purple circle when enabled
-        else -> Color(0xFFB3261E)  // Red circle when disabled
+        isServiceEnabled -> Color(0xFF2E7D32)  // Dark green circle when enabled
+        else -> Color(0xFFC62828)  // Dark red circle when disabled
     }
 
     val textColor = when {
-        isServiceEnabled && isYouTubeActive -> Color(0xFF22C55E)  // Green text when watching
-        isServiceEnabled -> Color(0xFFFFA500)  // Orange text when enabled but not watching
-        else -> Color(0xFFB3261E)  // Red text when disabled
+        isServiceEnabled && isYouTubeActive -> Color.White  // White text when watching
+        isServiceEnabled -> Color.White  // White text when enabled
+        else -> Color.White  // White text when disabled
     }
 
     Card(
@@ -363,12 +374,25 @@ fun WarningBanner(
     onEnableClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Pulsing animation for attention
+    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
+    )
+
     Card(
         modifier = modifier
             .shadow(elevation = 6.dp, shape = RoundedCornerShape(18.dp))
-            .clip(RoundedCornerShape(18.dp)),
+            .clip(RoundedCornerShape(18.dp))
+            .animateContentSize(spring(dampingRatio = Spring.DampingRatioMediumBouncy)),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFEF2F2)  // Light red background
+            containerColor = Color(0xFFFFEBEE)  // Light red background
         )
     ) {
         Row(
@@ -378,12 +402,13 @@ fun WarningBanner(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Alert icon
+            // Alert icon with pulse
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFEF4444)),
+                    .background(Color(0xFFE53935))
+                    .graphicsLayer { alpha = pulseAlpha },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -410,12 +435,26 @@ fun WarningBanner(
                     color = Color(0xFF991B1B)
                 )
 
+                val buttonInteraction = androidx.compose.runtime.remember { MutableInteractionSource() }
+                val isButtonPressed by buttonInteraction.collectIsPressedAsState()
+                val buttonScale by animateFloatAsState(
+                    targetValue = if (isButtonPressed) 0.94f else 1f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                    label = "buttonScale"
+                )
+
                 Button(
                     onClick = onEnableClick,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFEF4444)
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    interactionSource = buttonInteraction,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer {
+                            scaleX = buttonScale
+                            scaleY = buttonScale
+                        }
                 ) {
                     Text(
                         text = "Enable Now",
@@ -448,30 +487,25 @@ fun StatsCard(
     Card(
         modifier = modifier
             .shadow(elevation = 4.dp, shape = RoundedCornerShape(20.dp))
-            .clip(RoundedCornerShape(20.dp))
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMedium
-                )
-            ),
+            .clip(RoundedCornerShape(20.dp)),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+            containerColor = Color(0xFF1E88E5)  // Material Blue
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(28.dp),
+                .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Total Ads Skipped",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.SemiBold
+                text = "Ads Blocked",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
                 ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color.White.copy(alpha = 0.9f)
             )
 
             AnimatedContent(
@@ -481,28 +515,10 @@ fun StatsCard(
                 Text(
                     text = count.toString(),
                     style = MaterialTheme.typography.displayLarge.copy(
-                        fontSize = 56.sp,
-                        fontWeight = FontWeight.ExtraBold
+                        fontSize = 72.sp,
+                        fontWeight = FontWeight.Black
                     ),
-                    color = Color(0xFFFFA500)  // Golden color
-                )
-            }
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF22C55E))
-                )
-                
-                Text(
-                    text = "all-time total",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White
                 )
             }
 
@@ -510,14 +526,24 @@ fun StatsCard(
             val minutesSaved = timeSaved / 60
             
             if (minutesSaved > 0) {
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = "⏱️ ~$minutesSaved minutes saved",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color(0xFFFFA500).copy(alpha = 0.8f),
-                    fontWeight = FontWeight.Medium
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.PlayArrow,
+                        contentDescription = null,
+                        tint = Color(0xFF4CAF50),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "$minutesSaved min saved",
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        color = Color.White.copy(alpha = 0.95f)
+                    )
+                }
             }
         }
     }
@@ -528,32 +554,68 @@ fun HowItWorksCard(
     onNavigateToHowItWorks: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val interactionSource = androidx.compose.runtime.remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "scaleAnim"
+    )
+    val elevation by animateDpAsState(
+        targetValue = if (isPressed) 2.dp else 4.dp,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "elevationAnim"
+    )
+
     Card(
         modifier = modifier
-            .shadow(elevation = 4.dp, shape = RoundedCornerShape(20.dp))
+            .shadow(elevation = elevation, shape = RoundedCornerShape(20.dp))
             .clip(RoundedCornerShape(20.dp))
-            .clickable { onNavigateToHowItWorks() },
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) { onNavigateToHowItWorks() }
+            .animateContentSize()
+            .then(
+                Modifier.graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                }
+            ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondaryContainer
         )
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = stringResource(R.string.how_it_works),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                fontWeight = FontWeight.Bold
-            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.how_it_works),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    fontWeight = FontWeight.Bold
+                )
 
-            Text(
-                text = "Learn how AdSkipper detects and skips YouTube ads automatically",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                Text(
+                    text = "Learn how AdSkipper detects and skips YouTube ads",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                )
+            }
+            
+            Icon(
+                imageVector = Icons.Rounded.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.size(24.dp)
             )
         }
     }

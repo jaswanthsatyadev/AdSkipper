@@ -630,12 +630,14 @@ fun AccessibilityPermissionStep(onOnboardingFinished: () -> Unit) {
         Spacer(modifier = Modifier.height(24.dp))
 
         if (!isServiceEnabled) {
-            // Steps
+            // Steps with enhanced animations
             StepCard(number = "1", text = "Tap 'Open Settings' below")
             Spacer(modifier = Modifier.height(12.dp))
-            StepCard(number = "2", text = "Find 'AdSkipper' in the list")
+            StepCard(number = "2", text = "Click 'Downloaded Apps' section")
             Spacer(modifier = Modifier.height(12.dp))
-            StepCard(number = "3", text = "Toggle it ON and come back")
+            StepCard(number = "3", text = "Find 'AdSkipper' in the list")
+            Spacer(modifier = Modifier.height(12.dp))
+            StepCard(number = "4", text = "Toggle it ON and come back")
 
             Spacer(modifier = Modifier.height(40.dp))
 

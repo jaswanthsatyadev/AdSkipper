@@ -2,6 +2,15 @@ package com.evolvarc.adskipper.ui.settings
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,9 +35,11 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Check     // For vibrate on skip
-import androidx.compose.material.icons.filled.Notifications  // For hide notification
-import androidx.compose.material.icons.filled.Info    // For skip delay (clock icon)
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Settings
@@ -91,22 +102,28 @@ fun SettingsScreen(
             .fillMaxSize()
             .padding(paddingValues)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .background(Color(0xFFF5F5F5))
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Settings Title
-        Text(
-            text = "Settings",
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 28.sp
-            ),
-            color = MaterialTheme.colorScheme.onBackground
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
+        // Settings Title with gradient background
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(0xFF1E88E5))
+                .padding(24.dp)
+        ) {
+            Text(
+                text = "Settings",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Black,
+                    fontSize = 32.sp,
+                    letterSpacing = 1.sp
+                ),
+                color = Color.White
+            )
+        }
 
         ServiceSettingsSection(
             isVibrateOnSkipEnabled = isVibrateOnSkipEnabled,
@@ -131,35 +148,35 @@ fun ServiceSettingsSection(
     onSkipDelayChanged: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
-            text = stringResource(R.string.service_settings_title),
-            style = MaterialTheme.typography.labelLarge.copy(
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold
+            text = "Ad Skipping Preferences",
+            style = MaterialTheme.typography.titleMedium.copy(
+                color = Color(0xFF1E88E5),
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
             ),
-            modifier = Modifier.padding(horizontal = 8.dp)
+            modifier = Modifier.padding(horizontal = 4.dp)
         )
 
-        // Vibrate on Skip
-        SettingItemCard(
-            icon = Icons.Filled.Notifications,
-            title = stringResource(R.string.vibrate_on_skip),
-            subtitle = "Haptic feedback when ad is skipped",
+        // Vibrate on Skip with animation
+        AnimatedSettingCard(
+            icon = Icons.Filled.Phone,
+            title = "Vibration Feedback",
+            subtitle = "Feel haptic feedback when ads are blocked",
             checked = isVibrateOnSkipEnabled,
             onCheckedChange = onVibrateOnSkipChanged,
-            backgroundColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+            accentColor = Color(0xFF4CAF50)
         )
 
-        // Hide Notification
-        SettingItemCard(
+        // Hide Notification with animation
+        AnimatedSettingCard(
             icon = Icons.Filled.Notifications,
-            title = "Hide notification",
-            subtitle = "Remove notification when not needed",
-            checked = isShowNotificationEnabled,
-            onCheckedChange = onShowNotificationChanged,
-            backgroundColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-            inverted = true
+            title = "Hide Notifications",
+            subtitle = "Keep your notification bar clean",
+            checked = !isShowNotificationEnabled,
+            onCheckedChange = { onShowNotificationChanged(!it) },
+            accentColor = Color(0xFFE53935)
         )
 
         // Skip Delay
@@ -171,43 +188,61 @@ fun ServiceSettingsSection(
 }
 
 @Composable
-fun SettingItemCard(
+fun AnimatedSettingCard(
     icon: ImageVector,
     title: String,
     subtitle: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    backgroundColor: Color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-    inverted: Boolean = false,
+    accentColor: Color,
     modifier: Modifier = Modifier
 ) {
+    // Animated colors and sizes
+    val backgroundColor by animateColorAsState(
+        targetValue = if (checked) accentColor.copy(alpha = 0.1f) else Color.White,
+        animationSpec = tween(300),
+        label = "bgColor"
+    )
+    
+    val iconBackgroundColor by animateColorAsState(
+        targetValue = if (checked) accentColor else Color(0xFFBDBDBD),
+        animationSpec = spring(),
+        label = "iconBgColor"
+    )
+    
+    val elevation by animateDpAsState(
+        targetValue = if (checked) 8.dp else 2.dp,
+        animationSpec = spring(),
+        label = "elevation"
+    )
+
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp)),
+            .shadow(elevation = elevation, shape = RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(20.dp)),
         colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon background circle
+            // Animated icon background
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(56.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
+                    .background(iconBackgroundColor),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(28.dp)
                 )
             }
 
@@ -218,28 +253,58 @@ fun SettingItemCard(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = if (checked) accentColor else Color(0xFF212121)
                 )
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF757575)
                 )
             }
 
-            // Switch
-            Switch(
-                checked = if (inverted) !checked else checked,
-                onCheckedChange = { onCheckedChange(if (inverted) !it else it) },
-                modifier = Modifier.padding(8.dp),
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary
-                )
+            // Animated Switch
+            AnimatedSwitch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                accentColor = accentColor
             )
         }
     }
+}
+
+@Composable
+fun AnimatedSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val thumbColor by animateColorAsState(
+        targetValue = if (checked) Color.White else Color(0xFFBDBDBD),
+        animationSpec = tween(200),
+        label = "thumbColor"
+    )
+    
+    val trackColor by animateColorAsState(
+        targetValue = if (checked) accentColor else Color(0xFFE0E0E0),
+        animationSpec = tween(200),
+        label = "trackColor"
+    )
+
+    Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier,
+        colors = SwitchDefaults.colors(
+            checkedThumbColor = thumbColor,
+            checkedTrackColor = trackColor,
+            uncheckedThumbColor = thumbColor,
+            uncheckedTrackColor = trackColor
+        )
+    )
 }
 
 @Composable
@@ -251,75 +316,99 @@ fun SkipDelayCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp)),
+            .shadow(elevation = 4.dp, shape = RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(20.dp)),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+            containerColor = Color.White
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(56.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
+                        .background(Color(0xFFFF9800)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Info,
+                        imageVector = Icons.Filled.DateRange,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(28.dp)
                     )
                 }
 
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = stringResource(R.string.skip_delay),
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = "Skip Delay",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = Color(0xFF212121)
                     )
                     Text(
-                        text = "Wait before clicking skip button",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "Wait before skipping ads",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF757575)
+                    )
+                }
+
+                // Display current delay value
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFFF9800).copy(alpha = 0.15f))
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "${skipDelay}s",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = Color(0xFFFF9800)
                     )
                 }
             }
 
-            // Slider with range 0.1 to 0.5 seconds (100 to 500 ms)
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Slider(
-                    value = skipDelay.toFloat(),
-                    onValueChange = { onSkipDelayChanged(it.toInt()) },
-                    valueRange = 100f..500f,
-                    steps = 40,
-                    modifier = Modifier.fillMaxWidth()
+            // Slider
+            Slider(
+                value = skipDelay.toFloat(),
+                onValueChange = { onSkipDelayChanged(it.toInt()) },
+                valueRange = 0f..5f,
+                steps = 4,
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.SliderDefaults.colors(
+                    thumbColor = Color(0xFFFF9800),
+                    activeTrackColor = Color(0xFFFF9800),
+                    inactiveTrackColor = Color(0xFFFFE0B2)
                 )
+            )
 
+            // Helper text
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Text(
-                    text = "%.1fs".format(skipDelay / 1000f),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    ),
-                    modifier = Modifier.padding(start = 8.dp)
+                    text = "Instant",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF9E9E9E)
+                )
+                Text(
+                    text = "5 seconds",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF9E9E9E)
                 )
             }
         }
