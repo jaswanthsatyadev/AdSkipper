@@ -116,9 +116,9 @@ fun MainAppScreen() {
     val currentRoute = backStackEntry?.destination?.route
     val orderedRoutes = listOf("home", "how_it_works", "settings", "about")
 
-    val slideSpec = tween<IntOffset>(
-        durationMillis = 650,
-        easing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
+    val slideSpec = spring<IntOffset>(
+        dampingRatio = Spring.DampingRatioMediumBouncy,
+        stiffness = Spring.StiffnessMedium
     )
 
     fun AnimatedContentTransitionScope<NavBackStackEntry>.directionFor(
@@ -166,7 +166,7 @@ fun MainAppScreen() {
                 slideOutOfContainer(
                     towards = direction,
                     animationSpec = slideSpec
-                ) + fadeOut(animationSpec = tween(350, easing = FastOutSlowInEasing))
+                ) + fadeOut(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium))
             },
             popEnterTransition = {
                 val direction = directionFor(initialState, targetState)
@@ -180,7 +180,7 @@ fun MainAppScreen() {
                 slideOutOfContainer(
                     towards = direction,
                     animationSpec = slideSpec
-                ) + fadeOut(animationSpec = tween(350, easing = FastOutSlowInEasing))
+                ) + fadeOut(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium))
             }
         ) {
             composable("home") {

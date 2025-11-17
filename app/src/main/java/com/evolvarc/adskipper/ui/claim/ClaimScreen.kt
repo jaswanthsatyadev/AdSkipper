@@ -124,7 +124,7 @@ fun ClaimScreen(
         ) {
             // Crown icon with bounce
             AnimatedVisibility(
-                visible = showInitial,
+                visible = showInitial && !showWhirlpool,
                 enter = fadeIn(tween(600)) + scaleIn(
                     animationSpec = spring(
                         dampingRatio = Spring.DampingRatioMediumBouncy,
@@ -143,7 +143,7 @@ fun ClaimScreen(
 
             // Title with shimmer
             AnimatedVisibility(
-                visible = showInitial,
+                visible = showInitial && !showWhirlpool,
                 enter = fadeIn(tween(600, delayMillis = 200)) +
                         slideInVertically(
                             initialOffsetY = { -50 },
@@ -165,7 +165,7 @@ fun ClaimScreen(
 
             // Subtitle
             AnimatedVisibility(
-                visible = showInitial && !showSuccess,
+                visible = showInitial && !showSuccess && !showWhirlpool,
                 enter = fadeIn(tween(600, delayMillis = 400))
             ) {
                 Text(

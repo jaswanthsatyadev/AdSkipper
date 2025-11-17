@@ -82,9 +82,9 @@ fun AboutScreen(
             contentAlignment = Alignment.Center
         ) {
             Image(
-                painter = painterResource(id = R.mipmap.ic_launcher_round),
+                painter = painterResource(id = R.drawable.ic_launcher_foreground),
                 contentDescription = "AdSkipper logo",
-                modifier = Modifier.size(88.dp)
+                modifier = Modifier.size(100.dp)
             )
         }
 

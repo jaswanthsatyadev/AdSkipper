@@ -158,18 +158,24 @@ class AdSkipperService : AccessibilityService() {
         // Check if we just clicked recently - prevent rapid repeated clicks
         val currentTime = SystemClock.uptimeMillis()
         if (currentTime - lastClickTime < MIN_CLICK_INTERVAL) {
-            Log.d(TAG, "Skipping click - too soon after last click (${(currentTime - lastClickTime)/1000}s ago)")
+            Log.d(TAG, "⏳ Skipping detection - too soon after last click (${(currentTime - lastClickTime)/1000.0}s ago, minimum ${MIN_CLICK_INTERVAL/1000}s)")
             return
         }
+        
+        Log.d(TAG, "🔍 Starting ad detection layers...")
         
         // First, verify we're actually in an ad context
         if (!isInAdContext(node)) {
-            Log.d(TAG, "Not in ad context - skipping button search")
+            Log.d(TAG, "❌ Not in ad context - skipping button search")
             return
         }
         
+        Log.d(TAG, "✅ Ad context confirmed - searching for skip button...")
+        
         // Layer 1: Search by View ID - com.google.android.youtube:id/skip_ad_button
+        Log.d(TAG, "🔍 Layer 1: Searching by View ID 'skip_ad_button'...")
         val layer1Nodes = node.findAccessibilityNodeInfosByViewId("com.google.android.youtube:id/skip_ad_button")
+        Log.d(TAG, "📊 Layer 1: Found ${layer1Nodes.size} nodes with View ID 'skip_ad_button'")
         if (layer1Nodes.isNotEmpty()) {
             val searchTime = SystemClock.uptimeMillis() - searchStartTime
             Log.d(TAG, "⚡ Layer 1: Found skip button in ${searchTime}ms (View ID: skip_ad_button)")
@@ -179,7 +185,9 @@ class AdSkipperService : AccessibilityService() {
         }
 
         // Layer 2: Search by View ID - com.google.android.youtube:id/skip_button
+        Log.d(TAG, "🔍 Layer 2: Searching by View ID 'skip_button'...")
         val layer2Nodes = node.findAccessibilityNodeInfosByViewId("com.google.android.youtube:id/skip_button")
+        Log.d(TAG, "📊 Layer 2: Found ${layer2Nodes.size} nodes with View ID 'skip_button'")
         if (layer2Nodes.isNotEmpty()) {
             val searchTime = SystemClock.uptimeMillis() - searchStartTime
             Log.d(TAG, "⚡ Layer 2: Found skip button in ${searchTime}ms (View ID: skip_button)")
@@ -189,6 +197,7 @@ class AdSkipperService : AccessibilityService() {
         }
 
         // Layer 3: Text-based search - Multiple variations for different devices/languages
+        Log.d(TAG, "🔍 Layer 3: Searching by text content...")
         val skipTexts = listOf(
             // English
             "Skip Ad", "Skip ad", "SKIP AD",
@@ -218,6 +227,7 @@ class AdSkipperService : AccessibilityService() {
         for (text in skipTexts) {
             val layer3Nodes = node.findAccessibilityNodeInfosByText(text)
             if (layer3Nodes.isNotEmpty()) {
+                Log.d(TAG, "📊 Layer 3: Found ${layer3Nodes.size} nodes with text '$text'")
                 for (textNode in layer3Nodes) {
                     // Must be clickable or have clickable parent
                     if (textNode.isClickable || textNode.parent?.isClickable == true) {
@@ -225,9 +235,10 @@ class AdSkipperService : AccessibilityService() {
                         clickTarget?.let {
                             // Validate it's actually a button and in reasonable position
                             val className = it.className?.toString() ?: ""
+                            Log.d(TAG, "🔍 Layer 3: Checking node with className: $className")
                             if (className.contains("Button", ignoreCase = true) || 
                                 className.contains("View", ignoreCase = true)) {
-                                Log.d(TAG, "Layer 3: Found skip button by text '$text'")
+                                Log.d(TAG, "✅ Layer 3: Found valid skip button by text '$text' (className: $className)")
                                 clickAndHandleAudio(it, "Text: $text")
                                 layer3Nodes.forEach { n -> n.recycle() }
                                 return
@@ -239,7 +250,10 @@ class AdSkipperService : AccessibilityService() {
             }
         }
         
+        Log.d(TAG, "❌ Layer 3: No skip button found by text")
+        
         // Layer 4: Content Description search (for accessibility-enabled devices)
+        Log.d(TAG, "🔍 Layer 4: Searching by content description...")
         val contentDescriptions = listOf(
             "Skip ad", "Skip Ad", "Skip",
             "Skip ads", "Skip Ads",
@@ -248,12 +262,15 @@ class AdSkipperService : AccessibilityService() {
         for (desc in contentDescriptions) {
             val descNode = findNodeByContentDescription(node, desc)
             if (descNode != null) {
-                Log.d(TAG, "Layer 4: Found skip button by content description '$desc'")
+                Log.d(TAG, "✅ Layer 4: Found skip button by content description '$desc'")
                 clickAndHandleAudio(descNode, "Content Desc: $desc")
                 descNode.recycle()
                 return
             }
         }
+        
+        Log.d(TAG, "❌ Layer 4: No skip button found by content description")
+        Log.d(TAG, "❌ All detection layers exhausted - no skip button found")
         
         // Layer 5: DISABLED - Fuzzy search is too aggressive
         // It can click on wrong buttons like "Skip intro", "Skip to next video", etc.
@@ -486,15 +503,19 @@ class AdSkipperService : AccessibilityService() {
                 vibrate()
             }
 
-            Log.d(TAG, "Attempting to click button: $reason")
+            Log.d(TAG, "⏳ Waiting ${skipDelay}ms before clicking button: $reason")
             delay(skipDelay) // Delay before clicking
             
+            Log.d(TAG, "🖱️ Performing click action on button...")
             val clicked = button.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            Log.d(TAG, "📊 Click action result: ${if (clicked) "SUCCESS ✅" else "FAILED ❌"}")
+            
             if (clicked) {
-                Log.d(TAG, "Successfully clicked skip button via $reason")
+                Log.d(TAG, "✅ Successfully clicked skip button via $reason")
                 
                 // Update last click timestamp to prevent rapid repeated clicks
                 lastClickTime = SystemClock.uptimeMillis()
+                Log.d(TAG, "⏱️ Last click timestamp updated: $lastClickTime")
                 
                 // Show "Skipped ad for you ;)" toast message
                 serviceScope.launch(Dispatchers.Main) {
