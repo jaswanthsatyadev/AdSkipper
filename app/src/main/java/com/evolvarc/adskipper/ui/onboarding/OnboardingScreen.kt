@@ -187,6 +187,77 @@ fun WelcomeStep(onNext: () -> Unit) {
 
         Spacer(modifier = Modifier.height(40.dp))
 
+        // Privacy & Trust Badges
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(500, delayMillis = 350))
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Why Choose AdSkipper?",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.primary
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // First row of badges
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    PrivacyBadge(icon = "🔒", text = "No Login")
+                    PrivacyBadge(icon = "🚫", text = "No Ads")
+                    PrivacyBadge(icon = "📵", text = "100% Offline")
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // Second row of badges
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    PrivacyBadge(icon = "👁️", text = "No Tracking")
+                    PrivacyBadge(icon = "💝", text = "Free Forever")
+                    PrivacyBadge(icon = "📖", text = "Open Source")
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Privacy Statement
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(500, delayMillis = 400))
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Text(
+                    text = "🛡️ Your privacy is our priority. All processing happens on your device. We never collect, store, or transmit your data.",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        lineHeight = 20.sp
+                    ),
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(40.dp))
+
         // Feature Cards with staggered animation
         AnimatedVisibility(
             visible = true,
@@ -632,5 +703,37 @@ fun StepCard(
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
+    }
+}
+
+@Composable
+fun PrivacyBadge(icon: String, text: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(100.dp)
+            .padding(vertical = 8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = icon,
+                fontSize = 24.sp
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.SemiBold
+            ),
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }

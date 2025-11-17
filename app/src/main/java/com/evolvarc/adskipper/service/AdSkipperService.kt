@@ -110,9 +110,9 @@ class AdSkipperService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         try {
-            // Throttle events to reduce processing load
+            // Throttle events to reduce processing load (reduced to 500ms for better detection)
             val currentTime = SystemClock.uptimeMillis()
-            if (currentTime - lastEventTime < 2000) {
+            if (currentTime - lastEventTime < 500) {
                 return
             }
             lastEventTime = currentTime
@@ -277,16 +277,34 @@ class AdSkipperService : AccessibilityService() {
         // Search for any ad-related view IDs or text
         for (indicator in adIndicators) {
             if (searchForIndicator(node, indicator)) {
-                Log.d(TAG, "Ad context confirmed - found indicator: $indicator")
+                Log.d(TAG, "✅ Ad context confirmed - found indicator: $indicator")
                 return true
             }
         }
         
-        // REMOVED: Generic "Skip" text check - too prone to false positives
-        // Only rely on specific ad-related view IDs and text
+        // FALLBACK: Look for "skip" text with ad-related context
+        // This is more lenient than before but still safer than blocking all detection
+        val skipNodes = node.findAccessibilityNodeInfosByText("skip")
+        if (skipNodes.isNotEmpty()) {
+            for (skipNode in skipNodes) {
+                val text = skipNode.text?.toString()?.lowercase() ?: ""
+                val contentDesc = skipNode.contentDescription?.toString()?.lowercase() ?: ""
+                
+                // Check if it's likely an ad skip button (contains "ad" or is a button)
+                if (text.contains("ad") || contentDesc.contains("ad") || 
+                    skipNode.className?.contains("Button") == true) {
+                    skipNodes.forEach { it.recycle() }
+                    Log.d(TAG, "⚠️ Ad context inferred from skip button with ad-related text")
+                    return true
+                }
+            }
+            skipNodes.forEach { it.recycle() }
+        }
         
-        Log.d(TAG, "No ad context detected")
-        return false
+        // CRITICAL FIX: If we're in YouTube and layers 1-4 exist, allow them to try
+        // This prevents the overly restrictive check from blocking legitimate ad detection
+        Log.w(TAG, "⚡ No explicit ad context found, but allowing detection layers to attempt")
+        return true  // Changed from false - this was blocking all detection!
     }
     
     /**

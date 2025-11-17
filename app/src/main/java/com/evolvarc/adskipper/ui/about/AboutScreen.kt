@@ -98,6 +98,57 @@ fun AboutScreen(
             textAlign = TextAlign.Center
         )
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Privacy & Trust Badge
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFE8F5E9)  // Light green
+            ),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "🛡️", fontSize = 28.sp)
+                    Text(
+                        text = "Privacy First",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = Color(0xFF1B5E20)
+                    )
+                }
+                
+                Text(
+                    text = "No login • No ads • No tracking • 100% offline\nAll processing happens on your device\nWe never collect, store, or transmit your data",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        lineHeight = 20.sp
+                    ),
+                    textAlign = TextAlign.Center,
+                    color = Color(0xFF2E7D32)
+                )
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    PrivacyFeature("🔒", "Secure")
+                    PrivacyFeature("📖", "Open Source")
+                    PrivacyFeature("💝", "Free Forever")
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
 
         // App Info Section
@@ -302,6 +353,24 @@ fun InfoItemCard(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun PrivacyFeature(icon: String, text: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(vertical = 4.dp)
+    ) {
+        Text(text = icon, fontSize = 24.sp)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Medium
+            ),
+            color = Color(0xFF2E7D32)
+        )
     }
 }
 
