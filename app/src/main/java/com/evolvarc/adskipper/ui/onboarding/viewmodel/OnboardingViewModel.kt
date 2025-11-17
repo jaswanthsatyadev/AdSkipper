@@ -17,7 +17,8 @@ class OnboardingViewModel @Inject constructor() : ViewModel() {
         when (_onboardingStep.value) {
             OnboardingStep.Welcome -> _onboardingStep.value = OnboardingStep.NotificationPermission
             OnboardingStep.NotificationPermission -> _onboardingStep.value = OnboardingStep.AccessibilityPermission
-            OnboardingStep.AccessibilityPermission -> { /* Onboarding finished */ }
+            OnboardingStep.AccessibilityPermission -> _onboardingStep.value = OnboardingStep.Claim
+            OnboardingStep.Claim -> { /* Onboarding finished */ }
         }
     }
 }
@@ -26,4 +27,5 @@ sealed class OnboardingStep {
     object Welcome : OnboardingStep()
     object NotificationPermission : OnboardingStep()
     object AccessibilityPermission : OnboardingStep()
+    object Claim : OnboardingStep()
 }

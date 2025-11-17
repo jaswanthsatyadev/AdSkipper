@@ -7,6 +7,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -22,7 +24,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -110,6 +114,28 @@ fun MainAppScreen() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    val orderedRoutes = listOf("home", "how_it_works", "settings", "about")
+
+    val slideSpec = tween<IntOffset>(
+        durationMillis = 650,
+        easing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
+    )
+
+    fun AnimatedContentTransitionScope<NavBackStackEntry>.directionFor(
+        initial: NavBackStackEntry,
+        target: NavBackStackEntry
+    ): AnimatedContentTransitionScope.SlideDirection {
+        val initialIndex = orderedRoutes.indexOf(initial.destination.route)
+        val targetIndex = orderedRoutes.indexOf(target.destination.route)
+        if (initialIndex == -1 || targetIndex == -1) {
+            return AnimatedContentTransitionScope.SlideDirection.Start
+        }
+        return if (targetIndex >= initialIndex) {
+            AnimatedContentTransitionScope.SlideDirection.Start
+        } else {
+            AnimatedContentTransitionScope.SlideDirection.End
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -129,38 +155,32 @@ fun MainAppScreen() {
             startDestination = "home",
             modifier = Modifier.fillMaxSize(),
             enterTransition = {
-                fadeIn(animationSpec = tween(400)) +
-                        slideIntoContainer(
-                            towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessMedium
-                            )
-                        )
+                val direction = directionFor(initialState, targetState)
+                slideIntoContainer(
+                    towards = direction,
+                    animationSpec = slideSpec
+                ) + fadeIn(animationSpec = tween(450, easing = FastOutSlowInEasing))
             },
             exitTransition = {
-                fadeOut(animationSpec = tween(300)) +
-                        slideOutOfContainer(
-                            towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                            animationSpec = tween(300)
-                        )
+                val direction = directionFor(initialState, targetState)
+                slideOutOfContainer(
+                    towards = direction,
+                    animationSpec = slideSpec
+                ) + fadeOut(animationSpec = tween(350, easing = FastOutSlowInEasing))
             },
             popEnterTransition = {
-                fadeIn(animationSpec = tween(400)) +
-                        slideIntoContainer(
-                            towards = AnimatedContentTransitionScope.SlideDirection.End,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessMedium
-                            )
-                        )
+                val direction = directionFor(initialState, targetState)
+                slideIntoContainer(
+                    towards = direction,
+                    animationSpec = slideSpec
+                ) + fadeIn(animationSpec = tween(450, easing = FastOutSlowInEasing))
             },
             popExitTransition = {
-                fadeOut(animationSpec = tween(300)) +
-                        slideOutOfContainer(
-                            towards = AnimatedContentTransitionScope.SlideDirection.End,
-                            animationSpec = tween(300)
-                        )
+                val direction = directionFor(initialState, targetState)
+                slideOutOfContainer(
+                    towards = direction,
+                    animationSpec = slideSpec
+                ) + fadeOut(animationSpec = tween(350, easing = FastOutSlowInEasing))
             }
         ) {
             composable("home") {

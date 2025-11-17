@@ -68,6 +68,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.evolvarc.adskipper.R
 import com.evolvarc.adskipper.ui.onboarding.viewmodel.OnboardingStep
 import com.evolvarc.adskipper.ui.onboarding.viewmodel.OnboardingViewModel
+import com.evolvarc.adskipper.ui.claim.ClaimScreen
 import com.evolvarc.adskipper.ui.theme.AdSkipperTheme
 import com.evolvarc.adskipper.utils.AccessibilityServiceUtils
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -113,7 +114,8 @@ fun OnboardingScreen(
             when (it) {
                 OnboardingStep.Welcome -> WelcomeStep { viewModel.nextStep() }
                 OnboardingStep.NotificationPermission -> NotificationPermissionStep { viewModel.nextStep() }
-                OnboardingStep.AccessibilityPermission -> AccessibilityPermissionStep(onOnboardingFinished)
+                OnboardingStep.AccessibilityPermission -> AccessibilityPermissionStep { viewModel.nextStep() }
+                OnboardingStep.Claim -> ClaimScreen { onOnboardingFinished() }
             }
         }
     }
@@ -302,9 +304,9 @@ fun WelcomeStep(onNext: () -> Unit) {
                     )
         ) {
             FeatureHighlightCard(
-                icon = "🔒",
-                title = "Private & Secure",
-                description = "Your data stays on your device"
+                icon = "💝",
+                title = "Free Forever",
+                description = "No subscriptions, no hidden fees"
             )
         }
 
@@ -335,21 +337,6 @@ fun WelcomeStep(onNext: () -> Unit) {
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Skip onboarding option with fade-in
-        AnimatedVisibility(
-            visible = true,
-            enter = fadeIn(animationSpec = tween(500, delayMillis = 800))
-        ) {
-            FilledTonalButton(
-                onClick = onNext,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Skip")
             }
         }
 

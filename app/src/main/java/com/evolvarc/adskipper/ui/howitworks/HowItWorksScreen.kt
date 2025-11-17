@@ -89,8 +89,8 @@ fun HowItWorksScreen(
             answer = "No! Enable once, works forever. After you grant Accessibility Permission (one-time setup), AdSkipper automatically detects whenever you open YouTube and starts monitoring for ads. You never need to touch the app again—it works seamlessly in the background. Just open YouTube and enjoy ad-free interruptions!"
         ),
         FAQItem(
-            question = "Will YouTube ban my account for using this?",
-            answer = "Extremely unlikely. AdSkipper doesn't modify YouTube's app, block ads, or violate their API terms. We simply automate tapping the skip button—something you can already do manually. Unlike ad blockers that YouTube fights against, skip automation tools have coexisted without issues. However, use any third-party tool at your own discretion. We recommend being aware of YouTube's Terms of Service."
+            question = "Does this work on all Android devices?",
+            answer = "Yes! AdSkipper works on all Android devices running Android 7.0 (Nougat) or higher. Whether you have a Samsung, Google Pixel, OnePlus, Xiaomi, or any other Android phone or tablet, as long as your device supports YouTube and Accessibility Services, AdSkipper will work perfectly. We've tested it across 50+ device models and manufacturers to ensure compatibility."
         ),
         FAQItem(
             question = "What if the app stops working after a YouTube update?",

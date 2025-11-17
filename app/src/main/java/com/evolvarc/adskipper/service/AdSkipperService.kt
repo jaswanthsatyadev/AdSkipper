@@ -44,6 +44,8 @@ class AdSkipperService : AccessibilityService() {
     private var originalVolume = -1
     private var isMuted = false
     private val NOTIFICATION_ID = 1
+    private val notificationsEnabled = false
+    private var isForegroundActive = false
     private val serviceControlReceiver = ServiceControlReceiver()
     
     // Prevent repeated clicking - minimum 5 seconds between clicks
@@ -81,22 +83,25 @@ class AdSkipperService : AccessibilityService() {
                 }
             }
 
-            // Start foreground notification - service only runs when YouTube is active (packageNames config)
-            serviceScope.launch {
-                try {
-                    if (userDataStore.showNotification.first()) {
-                        NotificationManager.createNotificationChannel(this@AdSkipperService)
-                        val adsSkipped = userDataStore.totalAdsSkipped.first()
-                        val notification = NotificationManager.getNotificationActive(
-                            this@AdSkipperService,
-                            adsSkipped,
-                            "YouTube"
-                        )
-                        startForeground(NOTIFICATION_ID, notification)
-                        Log.d(TAG, "Foreground notification started")
+            if (notificationsEnabled) {
+                // Start foreground notification - service only runs when YouTube is active (packageNames config)
+                serviceScope.launch {
+                    try {
+                        if (userDataStore.showNotification.first()) {
+                            NotificationManager.createNotificationChannel(this@AdSkipperService)
+                            val adsSkipped = userDataStore.totalAdsSkipped.first()
+                            val notification = NotificationManager.getNotificationActive(
+                                this@AdSkipperService,
+                                adsSkipped,
+                                "YouTube"
+                            )
+                            startForeground(NOTIFICATION_ID, notification)
+                            isForegroundActive = true
+                            Log.d(TAG, "Foreground notification started")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error starting foreground notification: ${e.message}", e)
                     }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error starting foreground notification: ${e.message}", e)
                 }
             }
             
@@ -597,16 +602,20 @@ class AdSkipperService : AccessibilityService() {
             Log.e(TAG, "Error unregistering receiver: ${e.message}")
         }
         
-        // Stop foreground service
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            @Suppress("DEPRECATION")
-            stopForeground(true)
+        // Stop foreground service if it was started
+        if (notificationsEnabled && isForegroundActive) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+            isForegroundActive = false
         }
     }
 
     private fun updateNotificationForApp(appName: String) {
+        if (!notificationsEnabled) return
         serviceScope.launch {
             if (userDataStore.showNotification.first()) {
                 val adsSkipped = userDataStore.totalAdsSkipped.first()
@@ -622,6 +631,7 @@ class AdSkipperService : AccessibilityService() {
     }
     
     private fun updateNotificationForIdleState() {
+        if (!notificationsEnabled) return
         serviceScope.launch {
             if (userDataStore.showNotification.first()) {
                 val adsSkipped = userDataStore.totalAdsSkipped.first()
@@ -636,6 +646,7 @@ class AdSkipperService : AccessibilityService() {
     }
 
     private fun updateNotification() {
+        if (!notificationsEnabled) return
         serviceScope.launch {
             if (userDataStore.showNotification.first()) {
                 val adsSkipped = userDataStore.totalAdsSkipped.first()

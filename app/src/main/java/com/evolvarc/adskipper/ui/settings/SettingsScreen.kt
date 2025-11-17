@@ -2,16 +2,19 @@ package com.evolvarc.adskipper.ui.settings
 
 import android.content.Intent
 import android.net.Uri
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,6 +43,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Settings
@@ -61,6 +65,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -75,11 +80,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.evolvarc.adskipper.R
@@ -179,6 +189,9 @@ fun ServiceSettingsSection(
             accentColor = Color(0xFFE53935)
         )
 
+        // Battery Optimization card
+        BatteryOptimizationCard()
+
         // Skip Delay
         SkipDelayCard(
             skipDelay = skipDelay,
@@ -210,18 +223,19 @@ fun AnimatedSettingCard(
         label = "iconBgColor"
     )
     
-    val elevation by animateDpAsState(
-        targetValue = if (checked) 8.dp else 2.dp,
-        animationSpec = spring(),
-        label = "elevation"
+    val borderColor by animateColorAsState(
+        targetValue = if (checked) accentColor.copy(alpha = 0.4f) else Color(0xFFE0E0E0),
+        animationSpec = tween(300),
+        label = "borderColor"
     )
 
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(elevation = elevation, shape = RoundedCornerShape(20.dp))
+            .border(BorderStroke(1.dp, borderColor), RoundedCornerShape(20.dp))
             .clip(RoundedCornerShape(20.dp)),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor)
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
@@ -313,6 +327,12 @@ fun SkipDelayCard(
     onSkipDelayChanged: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val delayLabel = remember(skipDelay) {
+        val labels = listOf("0.1s", "0.2s", "0.3s", "0.4s", "0.5s")
+        val index = skipDelay.coerceIn(0, labels.lastIndex)
+        labels[index]
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -372,7 +392,7 @@ fun SkipDelayCard(
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Text(
-                        text = "${skipDelay}s",
+                            text = delayLabel,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold
                         ),
@@ -381,12 +401,12 @@ fun SkipDelayCard(
                 }
             }
 
-            // Slider
+            // Slider - 0.1s to 0.5s (stored as 0-4, where 0=0.1s, 1=0.2s, etc)
             Slider(
                 value = skipDelay.toFloat(),
-                onValueChange = { onSkipDelayChanged(it.toInt()) },
-                valueRange = 0f..5f,
-                steps = 4,
+                onValueChange = { onSkipDelayChanged(it.roundToInt().coerceIn(0, 4)) },
+                valueRange = 0f..4f,
+                steps = 3,
                 modifier = Modifier.fillMaxWidth(),
                 colors = androidx.compose.material3.SliderDefaults.colors(
                     thumbColor = Color(0xFFFF9800),
@@ -401,16 +421,147 @@ fun SkipDelayCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Instant",
+                    text = "0.1s (Fast)",
                     style = MaterialTheme.typography.labelSmall,
                     color = Color(0xFF9E9E9E)
                 )
                 Text(
-                    text = "5 seconds",
+                    text = "0.5s (Safe)",
                     style = MaterialTheme.typography.labelSmall,
                     color = Color(0xFF9E9E9E)
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun BatteryOptimizationCard(
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val powerManager = context.getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
+    val packageName = context.packageName
+    val lifecycleOwner = LocalLifecycleOwner.current
+    
+    var isBatteryOptimizationDisabled by androidx.compose.runtime.remember {
+        mutableStateOf(powerManager.isIgnoringBatteryOptimizations(packageName))
+    }
+    var pendingRefresh by remember { mutableStateOf(false) }
+
+    LaunchedEffect(pendingRefresh) {
+        if (pendingRefresh) {
+            delay(1200)
+            isBatteryOptimizationDisabled = powerManager.isIgnoringBatteryOptimizations(packageName)
+            pendingRefresh = false
+        }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isBatteryOptimizationDisabled = powerManager.isIgnoringBatteryOptimizations(packageName)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isBatteryOptimizationDisabled) Color(0xFF9C27B0).copy(alpha = 0.1f) else Color.White,
+        animationSpec = tween(300),
+        label = "bgColor"
+    )
+    
+    val iconBackgroundColor by animateColorAsState(
+        targetValue = if (isBatteryOptimizationDisabled) Color(0xFF9C27B0) else Color(0xFFBDBDBD),
+        animationSpec = spring(),
+        label = "iconBgColor"
+    )
+    
+    val borderColor by animateColorAsState(
+        targetValue = if (isBatteryOptimizationDisabled) Color(0xFF9C27B0).copy(alpha = 0.4f) else Color(0xFFE0E0E0),
+        animationSpec = tween(300),
+        label = "borderColor"
+    )
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .border(BorderStroke(1.dp, borderColor), RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(20.dp)),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Animated icon background
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(iconBackgroundColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Star,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            // Text content
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "Run in Battery Saver",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = if (isBatteryOptimizationDisabled) Color(0xFF9C27B0) else Color(0xFF212121)
+                )
+                Text(
+                    text = "Keep skipping ads even in battery saving mode",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF757575)
+                )
+            }
+
+            // Animated Switch
+            AnimatedSwitch(
+                checked = isBatteryOptimizationDisabled,
+                onCheckedChange = { checked ->
+                    if (checked && !isBatteryOptimizationDisabled) {
+                        // Request battery optimization exemption
+                        try {
+                            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                data = Uri.parse("package:$packageName")
+                            }
+                            context.startActivity(intent)
+                            pendingRefresh = true
+                        } catch (e: Exception) {
+                            runCatching {
+                                context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                            }
+                            pendingRefresh = true
+                        }
+                    } else if (!checked && isBatteryOptimizationDisabled) {
+                        runCatching {
+                            context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                        }
+                        pendingRefresh = true
+                    }
+                },
+                accentColor = Color(0xFF9C27B0)
+            )
         }
     }
 }

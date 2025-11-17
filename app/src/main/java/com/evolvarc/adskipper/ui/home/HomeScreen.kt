@@ -222,7 +222,7 @@ fun StatusCard(
     val statusSubtext = when {
         !isServiceEnabled -> "Enable accessibility service to start"
         isYouTubeActive -> "Watching YouTube • Auto-skipping ads"
-        else -> "Monitoring for YouTube ads"
+        else -> "Ready to skip ads on YouTube"
     }
 
     val backgroundColor = when {
@@ -281,7 +281,7 @@ fun StatusCard(
             Text(
                 text = statusSubtext,
                 style = MaterialTheme.typography.bodyLarge,
-                color = statusColor.copy(alpha = 0.7f),
+                color = Color.White.copy(alpha = 0.9f),
                 textAlign = TextAlign.Center
             )
 
