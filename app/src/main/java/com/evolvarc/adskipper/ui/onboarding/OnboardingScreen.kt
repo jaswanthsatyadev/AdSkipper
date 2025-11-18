@@ -16,6 +16,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -57,6 +58,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -130,7 +132,7 @@ fun WelcomeStep(onNext: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Large Crown Icon with fade-in animation
+        // Large App Logo with fade-in animation
         AnimatedVisibility(
             visible = true,
             enter = fadeIn(animationSpec = tween(800)) + 
@@ -142,10 +144,10 @@ fun WelcomeStep(onNext: () -> Unit) {
                         )
                     )
         ) {
-            Text(
-                text = "👑",
-                style = MaterialTheme.typography.displayLarge.copy(fontSize = 80.sp),
-                modifier = Modifier.padding(vertical = 16.dp)
+            // Use AppLogo composable so the attached `adskipper_logo` drawable will be used if present
+            com.evolvarc.adskipper.ui.common.AppLogo(
+                modifier = Modifier.padding(vertical = 16.dp),
+                size = 140.dp
             )
         }
 

@@ -81,10 +81,11 @@ fun AboutScreen(
                 .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                contentDescription = "AdSkipper logo",
-                modifier = Modifier.size(100.dp)
+            // AppLogo will use attached `adskipper_logo` drawable if the resource exists
+            com.evolvarc.adskipper.ui.common.AppLogo(
+                modifier = Modifier.size(100.dp),
+                size = 100.dp,
+                cornerRadius = 20.dp
             )
         }
 
@@ -234,6 +235,18 @@ fun AboutScreen(
             }
         )
 
+        // Website Link
+        InfoItemCard(
+            icon = Icons.Filled.Star,
+            title = "Website",
+            value = "adskipper.evolvarc.com",
+            iconBgColor = Color(0xFF6366F1),
+            showArrow = true,
+            onClick = {
+                uriHandler.openUri("https://adskipper.evolvarc.com")
+            }
+        )
+
         Spacer(modifier = Modifier.height(16.dp))
 
         // Actions Section
@@ -278,47 +291,17 @@ fun AboutScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text(
-            text = "Terms & Conditions",
-            style = MaterialTheme.typography.labelLarge.copy(
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp)
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "AdSkipper is an assistive accessibility tool that simply automates the same tap you would perform on the \"Skip Ad\" button.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "We do not block, filter, or modify YouTube content. The YouTube app remains untouched and all actions happen locally on your device.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "By using AdSkipper you agree to use it responsibly, comply with YouTube's Terms of Service, and accept that you are solely responsible for how the service is used.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+        // Privacy Policy Link
+        InfoItemCard(
+            icon = Icons.Filled.Info,
+            title = "Privacy Policy",
+            value = "View our privacy policy",
+            iconBgColor = Color(0xFF10B981),
+            showArrow = true,
+            onClick = {
+                uriHandler.openUri("https://adskipper.evolvarc.com/privacy")
             }
-        }
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 

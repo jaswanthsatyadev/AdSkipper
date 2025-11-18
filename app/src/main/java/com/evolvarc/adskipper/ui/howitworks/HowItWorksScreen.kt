@@ -1,6 +1,9 @@
 package com.evolvarc.adskipper.ui.howitworks
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
@@ -39,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -125,7 +129,7 @@ fun HowItWorksScreen(
         ) {
             Text(
                 text = "Frequently Asked Questions",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
@@ -150,11 +154,25 @@ fun ExpandableFAQCard(
     modifier: Modifier = Modifier
 ) {
     var isExpanded by remember { mutableStateOf(false) }
+    
+    // Bouncy scale animation when card is pressed
+    val scale by animateFloatAsState(
+        targetValue = if (isExpanded) 1.02f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "scale"
+    )
 
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(elevation = 4.dp, shape = RoundedCornerShape(16.dp))
+            .scale(scale)
+            .shadow(
+                elevation = if (isExpanded) 8.dp else 4.dp,
+                shape = RoundedCornerShape(16.dp)
+            )
             .clip(RoundedCornerShape(16.dp))
             .clickable { isExpanded = !isExpanded },
         colors = CardDefaults.cardColors(
@@ -168,7 +186,7 @@ fun ExpandableFAQCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(18.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -187,16 +205,19 @@ fun ExpandableFAQCard(
                         text = number.toString(),
                         color = MaterialTheme.colorScheme.onPrimary,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
+                        fontSize = 16.sp,
                         modifier = Modifier
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
                     )
                 }
 
-                // Question Text
+                // Question Text - Larger font
                 Text(
                     text = question,
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp
+                    ),
                     color = if (isExpanded) {
                         MaterialTheme.colorScheme.primary
                     } else {
@@ -221,11 +242,21 @@ fun ExpandableFAQCard(
                 )
             }
 
-            // Answer - Animated Visibility
+            // Answer - Animated Visibility with bouncy spring animation
             AnimatedVisibility(
                 visible = isExpanded,
-                enter = expandVertically(),
-                exit = shrinkVertically()
+                enter = expandVertically(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                ),
+                exit = shrinkVertically(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(top = 12.dp)
@@ -244,9 +275,10 @@ fun ExpandableFAQCard(
                             tint = MaterialTheme.colorScheme.primary
                         )
 
+                        // Answer Text - Larger font
                         Text(
                             text = answer,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp),
                             color = if (isExpanded) {
                                 MaterialTheme.colorScheme.onPrimaryContainer
                             } else {

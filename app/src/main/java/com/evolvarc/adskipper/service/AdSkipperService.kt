@@ -203,26 +203,61 @@ class AdSkipperService : AccessibilityService() {
             "Skip Ad", "Skip ad", "SKIP AD",
             "Skip Ads", "Skip ads", "SKIP ADS",
             "Skip", "SKIP",
-            // Portuguese
-            "Pular anúncio", "Pular",
             // Spanish
-            "Saltar anuncio", "Saltar",
-            // German
-            "Anzeige überspringen", "Überspringen",
-            // French
-            "Ignorer l'annonce", "Ignorer", "Passer",
-            // Italian
-            "Salta annuncio", "Salta", "Ignora",
-            // Dutch
-            "Advertentie overslaan", "Overslaan",
+            "Saltar anuncio", "Saltar", "SALTAR",
+            "Omitir anuncio", "Omitir",
             // Hindi
             "विज्ञापन छोड़ें", "छोड़ें",
+            // Dutch
+            "Advertentie overslaan", "Overslaan",
+            // Polish
+            "Pomiń reklamę", "Pomiń",
+            // French
+            "Ignorer l'annonce", "Ignorer", "Passer",
+            "Ignorer la publicité",
+            // German
+            "Anzeige überspringen", "Überspringen",
+            "Werbung überspringen",
+            // Russian
+            "Пропустить объявление", "Пропустить",
+            "Пропустить рекламу",
             // Japanese
             "広告をスキップ", "スキップ",
             // Korean
             "광고 건너뛰기", "건너뛰기",
             // Arabic
-            "تخطي الإعلان", "تخطي"
+            "تخطي الإعلان", "تخطي",
+            // Thai
+            "ข้ามโฆษณา", "ข้าม",
+            // Vietnamese
+            "Bỏ qua quảng cáo", "Bỏ qua",
+            // Hungarian
+            "Hirdetés kihagyása", "Kihagyás",
+            // Romanian
+            "Omite anunțul", "Omite",
+            "Omiteți anunțul",
+            // Swedish
+            "Hoppa över annons", "Hoppa över",
+            // Danish
+            "Spring annonce over", "Spring over",
+            // Finnish
+            "Ohita mainos", "Ohita",
+            // Norwegian
+            "Hopp over annonse", "Hopp over",
+            // Ukrainian
+            "Пропустити оголошення", "Пропустити",
+            "Пропустити рекламу",
+            // Filipino (Tagalog)
+            "Laktawan ang ad", "Laktawan",
+            "Laktawan ang patalastas",
+            // Bengali
+            "বিজ্ঞাপন এড়িয়ে যান", "এড়িয়ে যান",
+            // Urdu
+            "اشتہار چھوڑیں", "چھوڑیں",
+            // Portuguese
+            "Pular anúncio", "Pular",
+            // Italian
+            "Salta annuncio", "Salta", "Ignora"
         )
         for (text in skipTexts) {
             val layer3Nodes = node.findAccessibilityNodeInfosByText(text)

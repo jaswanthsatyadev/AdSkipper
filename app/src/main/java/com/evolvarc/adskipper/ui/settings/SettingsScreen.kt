@@ -173,7 +173,7 @@ fun ServiceSettingsSection(
         AnimatedSettingCard(
             icon = Icons.Filled.Phone,
             title = "Vibration Feedback",
-            subtitle = "Feel haptic feedback when ads are blocked",
+            subtitle = "Feel haptic feedback when ads are skipped",
             checked = isVibrateOnSkipEnabled,
             onCheckedChange = onVibrateOnSkipChanged,
             accentColor = Color(0xFF4CAF50)

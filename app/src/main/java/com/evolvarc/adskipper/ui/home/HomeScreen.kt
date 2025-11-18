@@ -500,7 +500,7 @@ fun StatsCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Ads Blocked",
+                text = "Ads Skipped",
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp

@@ -35,13 +35,13 @@ object NotificationManager {
         val text = "Watching for ads... Skipped: $adsSkipped today"
 
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val openAppPendingIntent: PendingIntent = PendingIntent.getActivity(
             context,
             0,
             openAppIntent,
-            PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
         val pauseServiceIntent = Intent(context, ServiceControlReceiver::class.java).apply {
@@ -58,7 +58,8 @@ object NotificationManager {
             .setContentTitle(title)
             .setContentText(text)
             .setSmallIcon(R.drawable.ic_skip)
-            .setContentIntent(openAppPendingIntent)
+            .setOngoing(true)
+            .setAutoCancel(false)
             .addAction(R.drawable.ic_skip, "Open App", openAppPendingIntent)
             .addAction(R.drawable.ic_skip, "Pause Service", pauseServicePendingIntent)
             .build()
@@ -72,13 +73,13 @@ object NotificationManager {
         val text = "Watching $appName for ads... Skipped: $adsSkipped"
 
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val openAppPendingIntent: PendingIntent = PendingIntent.getActivity(
             context,
             0,
             openAppIntent,
-            PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
         val pauseServiceIntent = Intent(context, ServiceControlReceiver::class.java).apply {
@@ -95,7 +96,8 @@ object NotificationManager {
             .setContentTitle(title)
             .setContentText(text)
             .setSmallIcon(R.drawable.ic_skip)
-            .setContentIntent(openAppPendingIntent)
+            .setOngoing(true)
+            .setAutoCancel(false)
             .addAction(R.drawable.ic_skip, "Open App", openAppPendingIntent)
             .addAction(R.drawable.ic_skip, "Pause Service", pauseServicePendingIntent)
             .build()
@@ -109,13 +111,13 @@ object NotificationManager {
         val text = "Waiting for YouTube... Skipped: $adsSkipped today"
 
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val openAppPendingIntent: PendingIntent = PendingIntent.getActivity(
             context,
             0,
             openAppIntent,
-            PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
         val pauseServiceIntent = Intent(context, ServiceControlReceiver::class.java).apply {
@@ -132,7 +134,8 @@ object NotificationManager {
             .setContentTitle(title)
             .setContentText(text)
             .setSmallIcon(R.drawable.ic_skip)
-            .setContentIntent(openAppPendingIntent)
+            .setOngoing(true)
+            .setAutoCancel(false)
             .addAction(R.drawable.ic_skip, "Open App", openAppPendingIntent)
             .addAction(R.drawable.ic_skip, "Pause Service", pauseServicePendingIntent)
             .build()

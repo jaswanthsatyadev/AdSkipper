@@ -88,7 +88,7 @@ class UserDataStore(context: Context) {
     }
 
     val skipDelay: Flow<Int> = dataStore.data.map { preferences ->
-        preferences[SKIP_DELAY_KEY] ?: 150 // Default to 150ms
+        preferences[SKIP_DELAY_KEY] ?: 0 // Default to 0 (0.1s)
     }
 
     suspend fun setSkipDelay(delay: Int) {

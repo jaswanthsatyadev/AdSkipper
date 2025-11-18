@@ -10,6 +10,20 @@ AdSkipper is a lightweight Android accessibility companion that automatically ta
 - 🎨 **Modern UI** – polished Compose screens, smooth nav animations, and onboarding claim flow.
 - 🆓 **Free forever** – open source with a friendly non-commercial license.
 
+## Features
+
+- Version: **v1.0.0**
+- Auto-skip YouTube ads using Accessibility Service (no modification of YouTube app)
+- Multi-language detection for skip buttons (supports English, Hindi, Spanish, Dutch, Polish, French, German, Russian, Japanese, Korean, Arabic, Thai, Vietnamese, Hungarian, Romanian, Swedish, Danish, Finnish, Norwegian, Ukrainian, Filipino (Tagalog), Bengali, Urdu, Portuguese, Italian and more)
+- Configurable skip delay (default 0.1s) with 0.1s–0.5s options
+- Optional auto-mute during skips and haptic feedback
+- Privacy-first: runs entirely on-device, no accounts or external servers
+- Responsive Compose UI with onboarding, settings, and about screens
+- Foreground service with unobtrusive notification (manual Open App action)
+- Compatible with phones and tablets (responsive layouts)
+
+
+
 ## Getting Started
 
 ### Requirements

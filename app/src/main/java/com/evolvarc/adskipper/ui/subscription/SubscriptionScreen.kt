@@ -1,5 +1,6 @@
 package com.evolvarc.adskipper.ui.subscription
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -35,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -74,11 +76,10 @@ fun SubscriptionScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Crown Icon - Golden Premium Header
-            Text(
-                text = "👑",
-                style = MaterialTheme.typography.displayLarge.copy(fontSize = 64.sp),
-                modifier = Modifier.padding(vertical = 8.dp)
+            // App Logo - Premium Header (prefers attached `adskipper_logo` drawable if present)
+            com.evolvarc.adskipper.ui.common.AppLogo(
+                modifier = Modifier.padding(vertical = 8.dp),
+                size = 120.dp
             )
 
             // Premium Header

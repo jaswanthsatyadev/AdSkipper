@@ -3,6 +3,7 @@ package com.evolvarc.adskipper.ui.claim
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -22,11 +23,13 @@ import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.evolvarc.adskipper.R
 import kotlinx.coroutines.delay
 
 @Composable
@@ -122,7 +125,7 @@ fun ClaimScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Crown icon with bounce
+            // App logo with bounce
             AnimatedVisibility(
                 visible = showInitial && !showWhirlpool,
                 enter = fadeIn(tween(600)) + scaleIn(
@@ -132,10 +135,12 @@ fun ClaimScreen(
                     )
                 )
             ) {
-                Text(
-                    text = "👑",
-                    fontSize = 120.sp,
-                    modifier = Modifier.scale(scale)
+                // Use AppLogo which will prefer attached `adskipper_logo` drawable if available
+                com.evolvarc.adskipper.ui.common.AppLogo(
+                    modifier = Modifier
+                        .size(140.dp)
+                        .scale(scale),
+                    size = 140.dp
                 )
             }
 
