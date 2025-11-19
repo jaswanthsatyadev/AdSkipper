@@ -55,6 +55,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -194,7 +195,22 @@ fun HomeScreenContent(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            // Not Working Button
+            TextButton(
+                onClick = onNavigateToSettings,
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Text(
+                    text = "Not Working?",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold,
+                        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // How It Works Card
             HowItWorksCard(

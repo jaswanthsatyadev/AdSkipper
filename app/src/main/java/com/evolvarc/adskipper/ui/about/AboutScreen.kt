@@ -223,12 +223,12 @@ fun AboutScreen(
         InfoItemCard(
             icon = Icons.Filled.Info,
             title = "Contact",
-            value = "contact@evolvarc.com",
+            value = "adskipper@evolvarc.com",
             iconBgColor = Color(0xFFEF4444),
             onClick = {
                 val emailIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "message/rfc822"
-                    putExtra(Intent.EXTRA_EMAIL, arrayOf("contact@evolvarc.com"))
+                    putExtra(Intent.EXTRA_EMAIL, arrayOf("adskipper@evolvarc.com"))
                     putExtra(Intent.EXTRA_SUBJECT, "AdSkipper Feedback")
                 }
                 context.startActivity(Intent.createChooser(emailIntent, "Send Email"))

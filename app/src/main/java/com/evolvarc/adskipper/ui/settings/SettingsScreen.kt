@@ -97,12 +97,24 @@ import com.evolvarc.adskipper.ui.settings.viewmodel.SettingsViewModel
 import com.evolvarc.adskipper.ui.theme.AdSkipperTheme
 import com.evolvarc.adskipper.utils.AppUtils
 
+import com.evolvarc.adskipper.utils.BatteryOptimizationHelper
+
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import android.os.Build
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     paddingValues: PaddingValues = PaddingValues()
 ) {
+    val context = LocalContext.current
     val isVibrateOnSkipEnabled by viewModel.vibrateOnSkip.collectAsStateWithLifecycle()
     val isShowNotificationEnabled by viewModel.showNotification.collectAsStateWithLifecycle()
     val skipDelay by viewModel.skipDelay.collectAsStateWithLifecycle()
@@ -135,6 +147,8 @@ fun SettingsScreen(
             )
         }
 
+        TroubleshootCard()
+
         ServiceSettingsSection(
             isVibrateOnSkipEnabled = isVibrateOnSkipEnabled,
             isShowNotificationEnabled = isShowNotificationEnabled,
@@ -145,6 +159,145 @@ fun SettingsScreen(
         )
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+fun TroubleshootCard() {
+    val context = LocalContext.current
+    var expanded by remember { mutableStateOf(false) }
+    var selectedBrand by remember { mutableStateOf(BatteryOptimizationHelper.getBrandName()) }
+    var showBrandDropdown by remember { mutableStateOf(false) }
+    
+    val commonBrands = listOf(
+        "Xiaomi", "Redmi", "Poco", 
+        "Samsung", "Oppo", "Realme", 
+        "Vivo", "OnePlus", "Huawei", 
+        "Honor", "Asus", "Motorola"
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = !expanded },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFF9800).copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Settings,
+                            contentDescription = null,
+                            tint = Color(0xFFFF9800),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Text(
+                        text = "Not Working?",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
+                        )
+                    )
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = Color.Gray
+                )
+            }
+            
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(
+                        text = "If AdSkipper isn't working, it's likely due to battery optimization or background restrictions.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+
+                    // Brand Selector
+                    Box {
+                        Button(
+                            onClick = { showBrandDropdown = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFF5F5F5),
+                                contentColor = Color.Black
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Brand: $selectedBrand")
+                                Icon(Icons.Filled.KeyboardArrowDown, null)
+                            }
+                        }
+                        
+                        DropdownMenu(
+                            expanded = showBrandDropdown,
+                            onDismissRequest = { showBrandDropdown = false },
+                            modifier = Modifier.background(Color.White)
+                        ) {
+                            commonBrands.forEach { brand ->
+                                DropdownMenuItem(
+                                    text = { Text(brand) },
+                                    onClick = {
+                                        selectedBrand = brand
+                                        showBrandDropdown = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // Instructions
+                    Text(
+                        text = BatteryOptimizationHelper.getManufacturerSpecificInstructions(context, selectedBrand) 
+                            ?: "Please enable 'Autostart' or 'Background Activity' for AdSkipper in your device settings.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF424242),
+                        modifier = Modifier.background(Color(0xFFFFF3E0), RoundedCornerShape(8.dp)).padding(12.dp)
+                    )
+                    
+                    Button(
+                        onClick = { BatteryOptimizationHelper.openSettingsForBrand(context, selectedBrand) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFF9800)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Fix Issues (Open Settings)")
+                    }
+                }
+            }
+        }
     }
 }
 

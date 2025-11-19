@@ -34,7 +34,6 @@ fun BottomNavigationBar(
     onNavigate: (String) -> Unit
 ) {
     NavigationBar(
-        modifier = Modifier.height(72.dp),
         containerColor = Color.White,
         tonalElevation = 8.dp
     ) {

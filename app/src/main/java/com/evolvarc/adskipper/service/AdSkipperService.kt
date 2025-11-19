@@ -6,6 +6,8 @@ import android.content.IntentFilter
 import android.graphics.Rect
 import android.media.AudioManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -270,7 +272,27 @@ class AdSkipperService : AccessibilityService() {
                         clickTarget?.let {
                             // Validate it's actually a button and in reasonable position
                             val className = it.className?.toString() ?: ""
-                            Log.d(TAG, "🔍 Layer 3: Checking node with className: $className")
+                            val nodeText = it.text?.toString() ?: ""
+                            val viewId = it.viewIdResourceName ?: ""
+                            
+                            Log.d(TAG, "🔍 Layer 3: Checking node with className: $className, text: '$nodeText', id: $viewId")
+                            
+                            // FIX: Ignore nodes that are likely video titles or descriptions
+                            // 1. Ignore if text is too long (Skip buttons are short)
+                            if (nodeText.length > 20) {
+                                Log.d(TAG, "❌ Layer 3: Ignoring node - text too long (${nodeText.length} chars)")
+                                return@let
+                            }
+                            
+                            // 2. Ignore if view ID contains "title", "description", "subtitle"
+                            if (viewId.contains("title", ignoreCase = true) || 
+                                viewId.contains("description", ignoreCase = true) ||
+                                viewId.contains("subtitle", ignoreCase = true) ||
+                                viewId.contains("metadata", ignoreCase = true)) {
+                                Log.d(TAG, "❌ Layer 3: Ignoring node - view ID indicates content ($viewId)")
+                                return@let
+                            }
+
                             if (className.contains("Button", ignoreCase = true) || 
                                 className.contains("View", ignoreCase = true)) {
                                 Log.d(TAG, "✅ Layer 3: Found valid skip button by text '$text' (className: $className)")
@@ -552,8 +574,8 @@ class AdSkipperService : AccessibilityService() {
                 lastClickTime = SystemClock.uptimeMillis()
                 Log.d(TAG, "⏱️ Last click timestamp updated: $lastClickTime")
                 
-                // Show "Skipped ad for you ;)" toast message
-                serviceScope.launch(Dispatchers.Main) {
+                // Show "Skipped ad for you ;)" toast message safely on Main Thread
+                Handler(Looper.getMainLooper()).post {
                     try {
                         Toast.makeText(
                             this@AdSkipperService,
@@ -578,7 +600,7 @@ class AdSkipperService : AccessibilityService() {
 
                 updateNotification()
                 
-                // Broadcast ad skip event to show toast
+                // Broadcast ad skip event (Receiver will handle Toast if app is active)
                 val intent = android.content.Intent("com.evolvarc.adskipper.AD_SKIPPED")
                 sendBroadcast(intent)
 

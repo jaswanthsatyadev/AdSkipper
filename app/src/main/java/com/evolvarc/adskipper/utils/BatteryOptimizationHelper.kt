@@ -55,8 +55,8 @@ object BatteryOptimizationHelper {
      * Get manufacturer-specific instructions for disabling battery optimization
      * Different OEMs have different settings locations and additional restrictions
      */
-    fun getManufacturerSpecificInstructions(context: Context): String? {
-        val manufacturer = Build.MANUFACTURER.lowercase()
+    fun getManufacturerSpecificInstructions(context: Context, brand: String = Build.MANUFACTURER): String? {
+        val manufacturer = brand.lowercase()
         return when {
             manufacturer.contains("samsung") -> 
                 "Samsung Tip: Go to Settings → Apps → AdSkipper → Battery → Optimize battery usage → All apps → AdSkipper → Don't optimize"
@@ -100,5 +100,131 @@ object BatteryOptimizationHelper {
             
             Don't worry - AdSkipper is designed to be lightweight and won't significantly impact your battery life.
         """.trimIndent()
+    }
+
+    /**
+     * Check if the device is a Xiaomi/Redmi device
+     */
+    fun isXiaomi(): Boolean {
+        return Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true) ||
+               Build.MANUFACTURER.equals("Redmi", ignoreCase = true) ||
+               Build.MANUFACTURER.equals("Poco", ignoreCase = true)
+    }
+
+    /**
+     * Check if the device is from a manufacturer known for strict background policies
+     */
+    fun isRestrictedBrand(): Boolean {
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        return manufacturer.contains("xiaomi") || 
+               manufacturer.contains("redmi") || 
+               manufacturer.contains("poco") ||
+               manufacturer.contains("oppo") || 
+               manufacturer.contains("realme") || 
+               manufacturer.contains("vivo") ||
+               manufacturer.contains("huawei") || 
+               manufacturer.contains("honor") ||
+               manufacturer.contains("oneplus") ||
+               manufacturer.contains("samsung") ||
+               manufacturer.contains("meizu") ||
+               manufacturer.contains("letv")
+    }
+
+    /**
+     * Get the brand name for display
+     */
+    fun getBrandName(): String {
+        return Build.MANUFACTURER.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+    }
+
+    /**
+     * Open Xiaomi Autostart settings
+     */
+    fun openXiaomiAutostart(context: Context) {
+        try {
+            val intent = Intent()
+            intent.component = android.content.ComponentName(
+                "com.miui.securitycenter",
+                "com.miui.permcenter.autostart.AutoStartManagementActivity"
+            )
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open Xiaomi Autostart: ${e.message}")
+            try {
+                // Fallback for some other MIUI versions
+                val intent = Intent()
+                intent.component = android.content.ComponentName(
+                    "com.miui.securitycenter",
+                    "com.miui.powercenter.PowerSettings"
+                )
+                context.startActivity(intent)
+            } catch (e2: Exception) {
+                Log.e(TAG, "Failed to open Xiaomi PowerSettings: ${e2.message}")
+                // Generic settings fallback
+                try {
+                    val intent = Intent(Settings.ACTION_SETTINGS)
+                    context.startActivity(intent)
+                } catch (e3: Exception) {
+                    // Ignore
+                }
+            }
+        }
+    }
+
+    /**
+     * Attempt to open the specific background/autostart settings for a specific brand
+     */
+    fun openSettingsForBrand(context: Context, brand: String) {
+        val brandLower = brand.lowercase()
+        try {
+            val intent = Intent()
+            when {
+                brandLower.contains("xiaomi") || brandLower.contains("redmi") || brandLower.contains("poco") -> {
+                    openXiaomiAutostart(context)
+                    return
+                }
+                brandLower.contains("oppo") || brandLower.contains("realme") -> {
+                    intent.component = android.content.ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity")
+                    if (context.packageManager.resolveActivity(intent, 0) == null) {
+                        intent.component = android.content.ComponentName("com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity")
+                    }
+                }
+                brandLower.contains("vivo") -> {
+                    intent.component = android.content.ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity")
+                }
+                brandLower.contains("huawei") || brandLower.contains("honor") -> {
+                    intent.component = android.content.ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity")
+                }
+                brandLower.contains("samsung") -> {
+                    intent.component = android.content.ComponentName("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity")
+                }
+                brandLower.contains("oneplus") -> {
+                    intent.component = android.content.ComponentName("com.oneplus.security", "com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity")
+                }
+                else -> {
+                    intent.action = Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS
+                }
+            }
+            
+            if (context.packageManager.resolveActivity(intent, 0) != null) {
+                context.startActivity(intent)
+            } else {
+                context.startActivity(Intent(Settings.ACTION_SETTINGS))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open settings for $brand: ${e.message}")
+            try {
+                context.startActivity(Intent(Settings.ACTION_SETTINGS))
+            } catch (e2: Exception) {
+                // Ignore
+            }
+        }
+    }
+
+    /**
+     * Attempt to open the specific background/autostart settings for the current brand
+     */
+    fun openAutoStartSettings(context: Context) {
+        openSettingsForBrand(context, Build.MANUFACTURER)
     }
 }
