@@ -53,20 +53,10 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var userDataStore: UserDataStore
-    
-    private val adSkippedReceiver = AdSkippedReceiver()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
-        // Register ad skipped receiver
-        val filter = IntentFilter("com.evolvarc.adskipper.AD_SKIPPED")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(adSkippedReceiver, filter, RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(adSkippedReceiver, filter)
-        }
         
         setContent {
             AdSkipperTheme {
@@ -104,8 +94,6 @@ class MainActivity : ComponentActivity() {
     
     override fun onDestroy() {
         super.onDestroy()
-        // DISABLED: Notification functionality temporarily disabled
-        // unregisterReceiver(adSkippedReceiver)
     }
 }
 

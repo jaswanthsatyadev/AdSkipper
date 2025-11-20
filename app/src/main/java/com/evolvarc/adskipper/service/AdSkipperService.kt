@@ -6,8 +6,8 @@ import android.content.IntentFilter
 import android.graphics.Rect
 import android.media.AudioManager
 import android.os.Build
-import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -284,12 +284,29 @@ class AdSkipperService : AccessibilityService() {
                                 return@let
                             }
                             
-                            // 2. Ignore if view ID contains "title", "description", "subtitle"
+                            // 2. Ignore if view ID contains "title", "description", "subtitle", "video", "reel"
                             if (viewId.contains("title", ignoreCase = true) || 
                                 viewId.contains("description", ignoreCase = true) ||
                                 viewId.contains("subtitle", ignoreCase = true) ||
-                                viewId.contains("metadata", ignoreCase = true)) {
+                                viewId.contains("metadata", ignoreCase = true) ||
+                                viewId.contains("video", ignoreCase = true) ||
+                                viewId.contains("reel", ignoreCase = true) ||
+                                viewId.contains("thumbnail", ignoreCase = true) ||
+                                viewId.contains("compact", ignoreCase = true)) {
                                 Log.d(TAG, "❌ Layer 3: Ignoring node - view ID indicates content ($viewId)")
+                                return@let
+                            }
+                            
+                            // 3. Only accept nodes that are EXACT matches or contain "ad" in text
+                            val lowerNodeText = nodeText.lowercase()
+                            val lowerSearchText = text.lowercase()
+                            val isExactMatch = lowerNodeText == lowerSearchText
+                            val containsAd = lowerNodeText.contains("ad") || lowerNodeText.contains("anuncio") || 
+                                           lowerNodeText.contains("anúncio") || lowerNodeText.contains("annonce") ||
+                                           lowerNodeText.contains("annons") || lowerNodeText.contains("anzeige")
+                            
+                            if (!isExactMatch && !containsAd) {
+                                Log.d(TAG, "❌ Layer 3: Ignoring node - text doesn't contain ad-related keywords")
                                 return@let
                             }
 
@@ -574,19 +591,6 @@ class AdSkipperService : AccessibilityService() {
                 lastClickTime = SystemClock.uptimeMillis()
                 Log.d(TAG, "⏱️ Last click timestamp updated: $lastClickTime")
                 
-                // Show "Skipped ad for you ;)" toast message safely on Main Thread
-                Handler(Looper.getMainLooper()).post {
-                    try {
-                        Toast.makeText(
-                            this@AdSkipperService,
-                            "Skipped ad for you ;)",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error showing toast: ${e.message}")
-                    }
-                }
-                
                 // Update statistics (ensure completion with proper coroutine scope)
                 serviceScope.launch {
                     try {
@@ -599,10 +603,6 @@ class AdSkipperService : AccessibilityService() {
                 }
 
                 updateNotification()
-                
-                // Broadcast ad skip event (Receiver will handle Toast if app is active)
-                val intent = android.content.Intent("com.evolvarc.adskipper.AD_SKIPPED")
-                sendBroadcast(intent)
 
                 // Unmute after a delay if auto-mute was enabled
                 if (isAutoMuteEnabled) {
