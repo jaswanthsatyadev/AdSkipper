@@ -26,6 +26,7 @@ class UserDataStore(context: Context) {
         val SKIP_DELAY_KEY = intPreferencesKey("skip_delay")
         val ONBOARDING_COMPLETE_KEY = booleanPreferencesKey("onboarding_complete")
         val IS_FIRST_HOME_SCREEN_VISIT_KEY = booleanPreferencesKey("is_first_home_screen_visit")
+        val SELECTED_LANGUAGE_KEY = androidx.datastore.preferences.core.stringPreferencesKey("selected_language")
     }
 
     val autoMuteAds: Flow<Boolean> = dataStore.data.map {
@@ -114,6 +115,18 @@ class UserDataStore(context: Context) {
     suspend fun setFirstHomeScreenVisit(isFirst: Boolean) {
         dataStore.edit {
             it[IS_FIRST_HOME_SCREEN_VISIT_KEY] = isFirst
+        }
+    }
+
+
+
+    val selectedLanguage: Flow<String> = dataStore.data.map { preferences ->
+        preferences[SELECTED_LANGUAGE_KEY] ?: "ALL"
+    }
+
+    suspend fun setSelectedLanguage(languageCode: String) {
+        dataStore.edit {
+            it[SELECTED_LANGUAGE_KEY] = languageCode
         }
     }
 }

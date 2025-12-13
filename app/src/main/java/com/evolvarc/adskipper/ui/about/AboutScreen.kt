@@ -96,26 +96,26 @@ fun AboutScreen(
             text = "AdSkipper",
             style = MaterialTheme.typography.headlineLarge.copy(
                 fontSize = 32.sp,
-                fontWeight = FontWeight.ExtraBold
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-1).sp
             ),
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.primary
         )
 
-        // Version
-        Text(
-            text = "Version $appVersion",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-
-        Text(
-            text = "Automatically skip YouTube ads",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
+        // Version Badge
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = "v$appVersion",
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -123,47 +123,48 @@ fun AboutScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFE8F5E9)  // Light green
+                containerColor = Color(0xFFF1F8E9) // Very light green
             ),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(20.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "🛡️", fontSize = 28.sp)
+                    Text(text = "🛡️", fontSize = 24.sp)
                     Text(
-                        text = "Privacy First",
-                        style = MaterialTheme.typography.titleLarge.copy(
+                        text = "100% Privacy Focused",
+                        style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold
                         ),
-                        color = Color(0xFF1B5E20)
+                        color = Color(0xFF33691E)
                     )
                 }
                 
                 Text(
-                    text = "No login • No ads • No tracking • 100% offline\nAll processing happens on your device\nWe never collect, store, or transmit your data",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        lineHeight = 20.sp
-                    ),
+                    text = "No login • No ads • No tracking • Offline",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                     textAlign = TextAlign.Center,
-                    color = Color(0xFF2E7D32)
+                    color = Color(0xFF558B2F)
                 )
+
+                Spacer(modifier = Modifier.height(4.dp))
                 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     PrivacyFeature("🔒", "Secure")
-                    PrivacyFeature("📖", "Open Source")
-                    PrivacyFeature("💝", "Free Forever")
+                    PrivacyFeature("⚡", "Fast")
+                    PrivacyFeature("📖", "Open")
                 }
             }
         }

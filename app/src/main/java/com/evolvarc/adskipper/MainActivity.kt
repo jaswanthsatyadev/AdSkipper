@@ -182,10 +182,18 @@ fun MainAppScreen() {
                 HowItWorksScreen(paddingValues = paddingValues)
             }
             composable("settings") {
-                SettingsScreen(paddingValues = paddingValues)
+                SettingsScreen(
+                    paddingValues = paddingValues,
+                    onNavigateToTroubleshoot = { navController.navigate("troubleshoot") }
+                )
             }
             composable("about") {
                 AboutScreen(paddingValues = paddingValues)
+            }
+            composable("troubleshoot") {
+                com.evolvarc.adskipper.ui.troubleshoot.TroubleshootScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
         }
     }

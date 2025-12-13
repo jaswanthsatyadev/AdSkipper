@@ -46,9 +46,12 @@ class AdSkipperService : AccessibilityService() {
     private var originalVolume = -1
     private var isMuted = false
     private val NOTIFICATION_ID = 1
-    private val notificationsEnabled = false
+    private val NOTIFICATION_ID = 1
+    // private val notificationsEnabled = false // Removed hardcoded flag
+    private var isForegroundActive = false
     private var isForegroundActive = false
     private val serviceControlReceiver = ServiceControlReceiver()
+    private var currentSkipTexts: Set<String> = emptySet()
     
     // Prevent repeated clicking - minimum 5 seconds between clicks
     private val MIN_CLICK_INTERVAL = 5000L
@@ -85,25 +88,31 @@ class AdSkipperService : AccessibilityService() {
                 }
             }
 
-            if (notificationsEnabled) {
-                // Start foreground notification - service only runs when YouTube is active (packageNames config)
-                serviceScope.launch {
-                    try {
-                        if (userDataStore.showNotification.first()) {
-                            NotificationManager.createNotificationChannel(this@AdSkipperService)
-                            val adsSkipped = userDataStore.totalAdsSkipped.first()
-                            val notification = NotificationManager.getNotificationActive(
-                                this@AdSkipperService,
-                                adsSkipped,
-                                "YouTube"
-                            )
-                            startForeground(NOTIFICATION_ID, notification)
-                            isForegroundActive = true
-                            Log.d(TAG, "Foreground notification started")
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error starting foreground notification: ${e.message}", e)
+            // Start foreground notification dynamically based on DataStore
+            serviceScope.launch {
+                try {
+                    if (userDataStore.showNotification.first()) {
+                        NotificationManager.createNotificationChannel(this@AdSkipperService)
+                        val adsSkipped = userDataStore.totalAdsSkipped.first()
+                        val notification = NotificationManager.getNotificationActive(
+                            this@AdSkipperService,
+                            adsSkipped,
+                            "YouTube"
+                        )
+                        startForeground(NOTIFICATION_ID, notification)
+                        isForegroundActive = true
+                        Log.d(TAG, "Foreground notification started")
                     }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error starting foreground notification: ${e.message}", e)
+                }
+            }
+
+            // Observe Language Selection
+            serviceScope.launch {
+                userDataStore.selectedLanguage.collect { languageCode ->
+                    currentSkipTexts = SkipTextManager.getSkipTexts(languageCode)
+                    Log.d(TAG, "Language updated to $languageCode. Loaded ${currentSkipTexts.size} skip words.")
                 }
             }
             
@@ -115,9 +124,34 @@ class AdSkipperService : AccessibilityService() {
 
 
 
+    // ... (imports and class def)
+    private var isYouTubeActive = false
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         try {
-            // Throttle events to reduce processing load (reduced to 500ms for better detection)
+            val packageName = event?.packageName?.toString()
+            val isYouTube = packageName == "com.google.android.youtube"
+
+            // Smart Notification Logic:
+            // If we switch TO YouTube, show notification (if enabled).
+            // If we switch AWAY from YouTube, hide notification (stopForeground).
+            if (isYouTube && !isYouTubeActive) {
+                isYouTubeActive = true
+                Log.d(TAG, "YouTube detected - Activating service UI")
+                updateNotification() // Promotes to foreground
+            } else if (!isYouTube && isYouTubeActive && packageName != null) {
+                // We switched to another app (ignore null package names which might be system overlays)
+                isYouTubeActive = false
+                Log.d(TAG, "Exited YouTube (Active: $packageName) - Hiding service UI")
+                stopForegroundSafely()
+            }
+
+            // Only process skipping logic if YouTube is active
+            if (!isYouTubeActive && packageName != "com.google.android.youtube") {
+                return 
+            }
+
+            // Throttle events
             val currentTime = SystemClock.uptimeMillis()
             if (currentTime - lastEventTime < 500) {
                 return
@@ -126,441 +160,217 @@ class AdSkipperService : AccessibilityService() {
 
             val rootNode = rootInActiveWindow
             if (rootNode == null) {
-                Log.d(TAG, "Root node is null, skipping event")
+                // Log.d(TAG, "Root node is null") 
                 return
             }
             
-            Log.d(TAG, "Processing YouTube accessibility event")
-
+            // Log.d(TAG, "Processing YouTube event")
+            
             serviceScope.launch {
                 try {
-                    withTimeoutOrNull(3000) { // 3-second timeout for the search
+                    withTimeoutOrNull(3000) { 
                         findAndClickButton(rootNode)
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error in findAndClickButton: ${e.message}", e)
+                    Log.e(TAG, "Error in findAndClickButton: ${e.message}")
                 } finally {
                     try {
                         rootNode.recycle()
                     } catch (e: Exception) {
-                        Log.e(TAG, "Error recycling root node: ${e.message}")
+                        // ignore
                     }
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error in onAccessibilityEvent: ${e.message}", e)
+            Log.e(TAG, "Error in onAccessibilityEvent: ${e.message}")
         }
     }
+
+    private fun stopForegroundSafely() {
+        if (isForegroundActive) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+            isForegroundActive = false
+        }
+    }
+
+    // ... (rest of class)
     
 
 
     private suspend fun findAndClickButton(node: AccessibilityNodeInfo) {
         val searchStartTime = SystemClock.uptimeMillis()
         
-        // Check if we just clicked recently - prevent rapid repeated clicks
+        // Check if we just clicked recently
         val currentTime = SystemClock.uptimeMillis()
         if (currentTime - lastClickTime < MIN_CLICK_INTERVAL) {
-            Log.d(TAG, "⏳ Skipping detection - too soon after last click (${(currentTime - lastClickTime)/1000.0}s ago, minimum ${MIN_CLICK_INTERVAL/1000}s)")
             return
         }
-        
-        Log.d(TAG, "🔍 Starting ad detection layers...")
-        
-        // First, verify we're actually in an ad context
-        if (!isInAdContext(node)) {
-            Log.d(TAG, "❌ Not in ad context - skipping button search")
-            return
-        }
-        
-        Log.d(TAG, "✅ Ad context confirmed - searching for skip button...")
-        
-        // Layer 1: Search by View ID - com.google.android.youtube:id/skip_ad_button
-        Log.d(TAG, "🔍 Layer 1: Searching by View ID 'skip_ad_button'...")
-        val layer1Nodes = node.findAccessibilityNodeInfosByViewId("com.google.android.youtube:id/skip_ad_button")
-        Log.d(TAG, "📊 Layer 1: Found ${layer1Nodes.size} nodes with View ID 'skip_ad_button'")
-        if (layer1Nodes.isNotEmpty()) {
-            val searchTime = SystemClock.uptimeMillis() - searchStartTime
-            Log.d(TAG, "⚡ Layer 1: Found skip button in ${searchTime}ms (View ID: skip_ad_button)")
-            clickAndHandleAudio(layer1Nodes[0], "View ID: skip_ad_button")
-            layer1Nodes.forEach { it.recycle() }
-            return  // Early exit - fastest path
-        }
 
-        // Layer 2: Search by View ID - com.google.android.youtube:id/skip_button
-        Log.d(TAG, "🔍 Layer 2: Searching by View ID 'skip_button'...")
-        val layer2Nodes = node.findAccessibilityNodeInfosByViewId("com.google.android.youtube:id/skip_button")
-        Log.d(TAG, "📊 Layer 2: Found ${layer2Nodes.size} nodes with View ID 'skip_button'")
-        if (layer2Nodes.isNotEmpty()) {
-            val searchTime = SystemClock.uptimeMillis() - searchStartTime
-            Log.d(TAG, "⚡ Layer 2: Found skip button in ${searchTime}ms (View ID: skip_button)")
-            clickAndHandleAudio(layer2Nodes[0], "View ID: skip_button")
-            layer2Nodes.forEach { it.recycle() }
-            return  // Early exit
-        }
-
-        // Layer 3: Text-based search - Multiple variations for different devices/languages
-        Log.d(TAG, "🔍 Layer 3: Searching by text content...")
-        val skipTexts = listOf(
-            // English
-            "Skip Ad", "Skip ad", "SKIP AD",
-            "Skip Ads", "Skip ads", "SKIP ADS",
-            "Skip", "SKIP",
-            // Spanish
-            "Saltar anuncio", "Saltar", "SALTAR",
-            "Omitir anuncio", "Omitir",
-            // Hindi
-            "विज्ञापन छोड़ें", "छोड़ें",
-            // Dutch
-            "Advertentie overslaan", "Overslaan",
-            // Polish
-            "Pomiń reklamę", "Pomiń",
-            // French
-            "Ignorer l'annonce", "Ignorer", "Passer",
-            "Ignorer la publicité",
-            // German
-            "Anzeige überspringen", "Überspringen",
-            "Werbung überspringen",
-            // Russian
-            "Пропустить объявление", "Пропустить",
-            "Пропустить рекламу",
-            // Japanese
-            "広告をスキップ", "スキップ",
-            // Korean
-            "광고 건너뛰기", "건너뛰기",
-            // Arabic
-            "تخطي الإعلان", "تخطي",
-            // Thai
-            "ข้ามโฆษณา", "ข้าม",
-            // Vietnamese
-            "Bỏ qua quảng cáo", "Bỏ qua",
-            // Hungarian
-            "Hirdetés kihagyása", "Kihagyás",
-            // Romanian
-            "Omite anunțul", "Omite",
-            "Omiteți anunțul",
-            // Swedish
-            "Hoppa över annons", "Hoppa över",
-            // Danish
-            "Spring annonce over", "Spring over",
-            // Finnish
-            "Ohita mainos", "Ohita",
-            // Norwegian
-            "Hopp over annonse", "Hopp over",
-            // Ukrainian
-            "Пропустити оголошення", "Пропустити",
-            "Пропустити рекламу",
-            // Filipino (Tagalog)
-            "Laktawan ang ad", "Laktawan",
-            "Laktawan ang patalastas",
-            // Bengali
-            "বিজ্ঞাপন এড়িয়ে যান", "এড়িয়ে যান",
-            // Urdu
-            "اشتہار چھوڑیں", "چھوڑیں",
-            // Portuguese
-            "Pular anúncio", "Pular",
-            // Italian
-            "Salta annuncio", "Salta", "Ignora"
+        // Layer 1 & 2: Quick Search by View ID (Fastest & Safest)
+        // These are indexed by the system and don't require manual traversal
+        val viewIds = listOf(
+            "com.google.android.youtube:id/skip_ad_button", 
+            "com.google.android.youtube:id/skip_button"
         )
-        for (text in skipTexts) {
-            val layer3Nodes = node.findAccessibilityNodeInfosByText(text)
-            if (layer3Nodes.isNotEmpty()) {
-                Log.d(TAG, "📊 Layer 3: Found ${layer3Nodes.size} nodes with text '$text'")
-                for (textNode in layer3Nodes) {
-                    // Must be clickable or have clickable parent
-                    if (textNode.isClickable || textNode.parent?.isClickable == true) {
-                        val clickTarget = if (textNode.isClickable) textNode else textNode.parent
-                        clickTarget?.let {
-                            // Validate it's actually a button and in reasonable position
-                            val className = it.className?.toString() ?: ""
-                            val nodeText = it.text?.toString() ?: ""
-                            val viewId = it.viewIdResourceName ?: ""
-                            
-                            Log.d(TAG, "🔍 Layer 3: Checking node with className: $className, text: '$nodeText', id: $viewId")
-                            
-                            // FIX: Ignore nodes that are likely video titles or descriptions
-                            // 1. Ignore if text is too long (Skip buttons are short)
-                            if (nodeText.length > 20) {
-                                Log.d(TAG, "❌ Layer 3: Ignoring node - text too long (${nodeText.length} chars)")
-                                return@let
-                            }
-                            
-                            // 2. Ignore if view ID contains "title", "description", "subtitle", "video", "reel"
-                            if (viewId.contains("title", ignoreCase = true) || 
-                                viewId.contains("description", ignoreCase = true) ||
-                                viewId.contains("subtitle", ignoreCase = true) ||
-                                viewId.contains("metadata", ignoreCase = true) ||
-                                viewId.contains("video", ignoreCase = true) ||
-                                viewId.contains("reel", ignoreCase = true) ||
-                                viewId.contains("thumbnail", ignoreCase = true) ||
-                                viewId.contains("compact", ignoreCase = true)) {
-                                Log.d(TAG, "❌ Layer 3: Ignoring node - view ID indicates content ($viewId)")
-                                return@let
-                            }
-                            
-                            // 3. Only accept nodes that are EXACT matches or contain "ad" in text
-                            val lowerNodeText = nodeText.lowercase()
-                            val lowerSearchText = text.lowercase()
-                            val isExactMatch = lowerNodeText == lowerSearchText
-                            val containsAd = lowerNodeText.contains("ad") || lowerNodeText.contains("anuncio") || 
-                                           lowerNodeText.contains("anúncio") || lowerNodeText.contains("annonce") ||
-                                           lowerNodeText.contains("annons") || lowerNodeText.contains("anzeige")
-                            
-                            if (!isExactMatch && !containsAd) {
-                                Log.d(TAG, "❌ Layer 3: Ignoring node - text doesn't contain ad-related keywords")
-                                return@let
-                            }
-
-                            if (className.contains("Button", ignoreCase = true) || 
-                                className.contains("View", ignoreCase = true)) {
-                                Log.d(TAG, "✅ Layer 3: Found valid skip button by text '$text' (className: $className)")
-                                clickAndHandleAudio(it, "Text: $text")
-                                layer3Nodes.forEach { n -> n.recycle() }
-                                return
-                            }
-                        }
-                    }
-                }
-                layer3Nodes.forEach { it.recycle() }
-            }
-        }
         
-        Log.d(TAG, "❌ Layer 3: No skip button found by text")
-        
-        // Layer 4: Content Description search (for accessibility-enabled devices)
-        Log.d(TAG, "🔍 Layer 4: Searching by content description...")
-        val contentDescriptions = listOf(
-            "Skip ad", "Skip Ad", "Skip",
-            "Skip ads", "Skip Ads",
-            "Advertisement skip", "Ad skip"
-        )
-        for (desc in contentDescriptions) {
-            val descNode = findNodeByContentDescription(node, desc)
-            if (descNode != null) {
-                Log.d(TAG, "✅ Layer 4: Found skip button by content description '$desc'")
-                clickAndHandleAudio(descNode, "Content Desc: $desc")
-                descNode.recycle()
+        for (id in viewIds) {
+            val nodes = node.findAccessibilityNodeInfosByViewId(id)
+            if (nodes.isNotEmpty()) {
+                val match = nodes[0]
+                clickAndHandleAudio(match, "View ID: ${id.substringAfter("/")}")
+                nodes.forEach { it.recycle() }
                 return
             }
         }
-        
-        Log.d(TAG, "❌ Layer 4: No skip button found by content description")
-        Log.d(TAG, "❌ All detection layers exhausted - no skip button found")
-        
-        // Layer 5: DISABLED - Fuzzy search is too aggressive
-        // It can click on wrong buttons like "Skip intro", "Skip to next video", etc.
-        // Only Layers 1-4 (View ID, Text matching, Content Description) are safe
-        
-        Log.d(TAG, "No skip button found in safe detection layers (1-4)")
 
-        Log.d(TAG, "No skip button found in any layer")
+        // If View IDs failed, check if we are in an ad context before efficient manual text scan
+        if (!isInAdContext(node)) {
+            return 
+        }
+
+        // Layer 3: Efficient Single-Pass Traversal for Text/Desc
+        // Replaces the expensive loop of 60+ text searches
+        try {
+            traverseAndFindButton(node)
+        } catch (e: Exception) {
+            // Log.e(TAG, "Error in traversal", e)
+        }
     }
 
     /**
-     * Validates that we're actually in an ad context before searching for skip buttons.
-     * This prevents clicking random buttons during normal YouTube usage.
+     * Efficiently traverses the node hierarchy once to find match.
+     * Returns true if button found and clicked.
      */
-    private fun isInAdContext(node: AccessibilityNodeInfo): Boolean {
-        // Check for ad indicators in the UI hierarchy
-        val adIndicators = listOf(
-            "com.google.android.youtube:id/ad_",
-            "com.google.android.youtube:id/skip_ad",
-            "com.google.android.youtube:id/skip_button",
-            "com.google.android.youtube:id/video_ads",
-            "ad overlay",
-            "advertisement"
-        )
-        
-        // Search for any ad-related view IDs or text
-        for (indicator in adIndicators) {
-            if (searchForIndicator(node, indicator)) {
-                Log.d(TAG, "✅ Ad context confirmed - found indicator: $indicator")
-                return true
-            }
-        }
-        
-        // FALLBACK: Look for "skip" text with ad-related context
-        // This is more lenient than before but still safer than blocking all detection
-        val skipNodes = node.findAccessibilityNodeInfosByText("skip")
-        if (skipNodes.isNotEmpty()) {
-            for (skipNode in skipNodes) {
-                val text = skipNode.text?.toString()?.lowercase() ?: ""
-                val contentDesc = skipNode.contentDescription?.toString()?.lowercase() ?: ""
-                
-                // Check if it's likely an ad skip button (contains "ad" or is a button)
-                if (text.contains("ad") || contentDesc.contains("ad") || 
-                    skipNode.className?.contains("Button") == true) {
-                    skipNodes.forEach { it.recycle() }
-                    Log.d(TAG, "⚠️ Ad context inferred from skip button with ad-related text")
-                    return true
-                }
-            }
-            skipNodes.forEach { it.recycle() }
-        }
-        
-        // CRITICAL FIX: If we're in YouTube and layers 1-4 exist, allow them to try
-        // This prevents the overly restrictive check from blocking legitimate ad detection
-        Log.w(TAG, "⚡ No explicit ad context found, but allowing detection layers to attempt")
-        return true  // Changed from false - this was blocking all detection!
-    }
-    
-    /**
-     * Recursively search for ad indicator in node hierarchy
-     */
-    private fun searchForIndicator(node: AccessibilityNodeInfo?, indicator: String): Boolean {
-        if (node == null) return false
-        
-        // Check viewIdResourceName
-        val viewId = node.viewIdResourceName?.lowercase() ?: ""
-        if (viewId.contains(indicator.lowercase())) {
+    private suspend fun traverseAndFindButton(node: AccessibilityNodeInfo): Boolean {
+        // Check current node
+        if (checkNodeForSkipText(node)) {
             return true
         }
         
-        // Check text
-        val text = node.text?.toString()?.lowercase() ?: ""
-        if (text.contains(indicator.lowercase())) {
-            return true
-        }
-        
-        // Check content description
-        val contentDesc = node.contentDescription?.toString()?.lowercase() ?: ""
-        if (contentDesc.contains(indicator.lowercase())) {
-            return true
-        }
-        
-        // Search children (limit depth to prevent performance issues)
-        for (i in 0 until minOf(node.childCount, 20)) {
+        // Recursively check children
+        // Limit depth to avoid stack overflow on crazy hierarchies?
+        // AccessibilityNodeInfo trees aren't usually deeper than 50-100.
+        val childCount = node.childCount
+        for (i in 0 until childCount) {
             val child = node.getChild(i) ?: continue
-            if (searchForIndicator(child, indicator)) {
+            if (traverseAndFindButton(child)) {
                 child.recycle()
                 return true
             }
             child.recycle()
+        }
+        return false
+    }
+
+    private suspend fun checkNodeForSkipText(node: AccessibilityNodeInfo): Boolean {
+        // Must be clickable or have clickable parent to be actionable
+        val isActionable = node.isClickable || node.parent?.isClickable == true
+        if (!isActionable) return false
+
+        val text = node.text?.toString() ?: ""
+        val desc = node.contentDescription?.toString() ?: ""
+        
+        // Optimize: Check if text is empty
+        if (text.isEmpty() && desc.isEmpty()) return false
+
+        // Safety Filter 1: Ignore long text (Skip buttons are short)
+        if (text.length > 25 || desc.length > 25) return false
+
+        // Safety Filter 2: Check View ID for non-button indicators
+        val viewId = node.viewIdResourceName?.lowercase() ?: ""
+        if (viewId.isNotEmpty()) {
+            if (viewId.contains("title") || viewId.contains("description") || 
+                viewId.contains("subtitle") || viewId.contains("metadata")) {
+                return false
+            }
+        }
+
+        val textTrimmed = text.trim()
+        val descTrimmed = desc.trim()
+
+        // 1. Exact Match (Fastest) in Set
+        if (textTrimmed.isNotEmpty() && currentSkipTexts.contains(textTrimmed)) {
+             clickIfValid(node, "Text Match: $textTrimmed")
+             return true
+        }
+        if (descTrimmed.isNotEmpty() && currentSkipTexts.contains(descTrimmed)) {
+             clickIfValid(node, "Desc Match: $descTrimmed")
+             return true
+        }
+
+        // 2. Contains Match (Iterate Set - still fast in memory)
+        // Only if we haven't found exact match.
+        // Helpful for "Skip Ad in 5s" type buttons if they become clickable text.
+        val textLower = text.lowercase()
+        val descLower = desc.lowercase()
+        
+        for (skipText in currentSkipTexts) {
+             val skipLower = skipText.lowercase()
+             // Check if node text contains the skip word (e.g. "Skip Ad" inside "Skip Ad >>")
+             if ((textLower.isNotEmpty() && textLower.contains(skipLower)) || 
+                 (descLower.isNotEmpty() && descLower.contains(skipLower))) {
+                  
+                  // Extra check: If it's a partial match, ensure it REALLY looks like a button
+                  if (node.className?.contains("Button") == true || 
+                      viewId.contains("button") || 
+                      viewId.contains("skip")) {
+                      clickIfValid(node, "Contains Match: $skipText")
+                      return true
+                  }
+             }
         }
         
         return false
     }
+    
+    private suspend fun clickIfValid(node: AccessibilityNodeInfo, reason: String) {
+        val target = if (node.isClickable) node else node.parent ?: node
+        clickAndHandleAudio(target, reason)
+    }
 
-        private fun checkForAdIndicators(node: AccessibilityNodeInfo?): Boolean {
-        if (node == null) return false
-        
-        // Look for ad-related text or content that indicates an ad is playing
+    /**
+     * Validates that we're actually in an ad context.
+     * Optimized to be lightweight.
+     */
+    private fun isInAdContext(node: AccessibilityNodeInfo): Boolean {
+        // Fast Check: Look for known ad UI elements by View ID (System Indexed)
         val adIndicators = listOf(
-            "ad", "advertisement", "sponsored",
-            "skip ad", "skip ads", "video will play",
-            "you can skip", "advertisement will end"
+            "com.google.android.youtube:id/ad_progress_bar",
+            "com.google.android.youtube:id/ad_countdown",
+            "com.google.android.youtube:id/ad_headline"
         )
         
-        fun searchNode(n: AccessibilityNodeInfo?): Boolean {
-            if (n == null) return false
-            
-            val text = n.text?.toString()?.lowercase() ?: ""
-            val contentDesc = n.contentDescription?.toString()?.lowercase() ?: ""
-            val viewId = n.viewIdResourceName?.lowercase() ?: ""
-            
-            // Check if any ad indicator is present
-            for (indicator in adIndicators) {
-                if (text.contains(indicator) || contentDesc.contains(indicator) || viewId.contains("ad")) {
-                    return true
-                }
-            }
-            
-            // Recursively check children
-            for (i in 0 until n.childCount) {
-                val child = n.getChild(i)
-                if (child != null) {
-                    if (searchNode(child)) {
-                        child.recycle()
-                        return true
-                    }
-                    child.recycle()
-                }
-            }
-            
-            return false
+        for (indicator in adIndicators) {
+             val nodes = node.findAccessibilityNodeInfosByViewId(indicator)
+             if (nodes.isNotEmpty()) {
+                 nodes.forEach { it.recycle() }
+                 return true
+             }
         }
         
-        return searchNode(node)
+        // Fallback: Check for "Visit Advertiser" or similar buttons which are common
+        val visitNodes = node.findAccessibilityNodeInfosByText("Visit advertiser")
+        if (visitNodes.isNotEmpty()) {
+            visitNodes.forEach { it.recycle() }
+            return true
+        }
+
+        // If no ad indicators, we skip the heavy manual sort.
+        // But wait, the "Skip" button itself is an indicator.
+        // Layer 1&2 already checked for the explicit button ID.
+        // If we are here, it means we don't have the standard ID.
+        // So we are looking for non-standard buttons (other languages/layouts).
+        // It's safer to proceed with the scan but ensure checkNodeForSkipText is strict.
+        
+        return true // For now, keep permissive but rely on exact Set match in traverse
     }
     
-    private fun findNodeByContentDescription(node: AccessibilityNodeInfo?, description: String): AccessibilityNodeInfo? {
-        if (node == null) return null
-
-        val contentDesc = node.contentDescription?.toString()?.lowercase()
-        if (contentDesc != null && contentDesc.contains(description.lowercase()) && node.isClickable) {
-            return node
-        }
-
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            val result = findNodeByContentDescription(child, description)
-            if (result != null) {
-                child.recycle()
-                return result
-            }
-            child.recycle()
-        }
-
-        return null
-    }
-
-    private fun findButtonInTopRightQuadrant(node: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
-        if (node == null) return null
-
-        // Get screen dimensions
-        val displayMetrics = resources.displayMetrics
-        val screenWidth = displayMetrics.widthPixels
-        val screenHeight = displayMetrics.heightPixels
-
-        // Define top-right quadrant (right half, top 40% of screen)
-        val topRightMinX = screenWidth / 2
-        val topRightMaxY = (screenHeight * 0.4).toInt()
-
-        return findButtonInRegion(node, topRightMinX, 0, screenWidth, topRightMaxY)
-    }
-
-    private fun findButtonInRegion(
-        node: AccessibilityNodeInfo?,
-        minX: Int,
-        minY: Int,
-        maxX: Int,
-        maxY: Int
-    ): AccessibilityNodeInfo? {
-        if (node == null) return null
-
-        // Check if current node is a clickable button in the region
-        if (node.isClickable && node.className?.contains("Button") == true) {
-            val rect = Rect()
-            node.getBoundsInScreen(rect)
-            
-            if (rect.centerX() in minX..maxX && rect.centerY() in minY..maxY) {
-                // Additional validation: skip button text hints
-                val text = node.text?.toString()?.lowercase()
-                val contentDesc = node.contentDescription?.toString()?.lowercase()
-                
-                if (text?.contains("skip") == true || contentDesc?.contains("skip") == true) {
-                    return node
-                }
-                
-                // If in exact top-right corner and is a button, likely the skip button
-                if (rect.centerX() > (maxX * 0.8) && rect.centerY() < (maxY * 0.5)) {
-                    return node
-                }
-            }
-        }
-
-        // Recursively search children
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            val result = findButtonInRegion(child, minX, minY, maxX, maxY)
-            if (result != null) {
-                child.recycle()
-                return result
-            }
-            child.recycle()
-        }
-
-        return null
-    }
+    // Dead code removed: searchForIndicator, checkForAdIndicators, findNodeByContentDescription, findButtonInTopRightQuadrant, findButtonInRegion
 
     private suspend fun clickAndHandleAudio(button: AccessibilityNodeInfo, reason: String) {
         try {
@@ -659,6 +469,20 @@ class AdSkipperService : AccessibilityService() {
         }
     }
 
+    // ... (previous code)
+
+    private fun updateNotification() {
+        // Check DataStore preference in the coroutine instead of a hardcoded flag
+        serviceScope.launch {
+            if (userDataStore.showNotification.first()) {
+                val adsSkipped = userDataStore.totalAdsSkipped.first()
+                val notification = NotificationManager.getNotification(this@AdSkipperService, adsSkipped)
+                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+                notificationManager.notify(NOTIFICATION_ID, notification)
+            }
+        }
+    }
+
     override fun onInterrupt() {
         Log.d(TAG, "Accessibility service interrupted")
     }
@@ -681,7 +505,7 @@ class AdSkipperService : AccessibilityService() {
         }
         
         // Stop foreground service if it was started
-        if (notificationsEnabled && isForegroundActive) {
+        if (isForegroundActive) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 stopForeground(STOP_FOREGROUND_REMOVE)
             } else {
@@ -691,49 +515,4 @@ class AdSkipperService : AccessibilityService() {
             isForegroundActive = false
         }
     }
-
-    private fun updateNotificationForApp(appName: String) {
-        if (!notificationsEnabled) return
-        serviceScope.launch {
-            if (userDataStore.showNotification.first()) {
-                val adsSkipped = userDataStore.totalAdsSkipped.first()
-                val notification = NotificationManager.getNotificationActive(
-                    this@AdSkipperService,
-                    adsSkipped,
-                    appName
-                )
-                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-                notificationManager.notify(NOTIFICATION_ID, notification)
-            }
-        }
-    }
-    
-    private fun updateNotificationForIdleState() {
-        if (!notificationsEnabled) return
-        serviceScope.launch {
-            if (userDataStore.showNotification.first()) {
-                val adsSkipped = userDataStore.totalAdsSkipped.first()
-                val notification = NotificationManager.getNotificationIdle(
-                    this@AdSkipperService,
-                    adsSkipped
-                )
-                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-                notificationManager.notify(NOTIFICATION_ID, notification)
-            }
-        }
-    }
-
-    private fun updateNotification() {
-        if (!notificationsEnabled) return
-        serviceScope.launch {
-            if (userDataStore.showNotification.first()) {
-                val adsSkipped = userDataStore.totalAdsSkipped.first()
-                val notification = NotificationManager.getNotification(this@AdSkipperService, adsSkipped)
-                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-                notificationManager.notify(NOTIFICATION_ID, notification)
-            }
-        }
-    }
-    
-    // ... (rest of the service)
 }

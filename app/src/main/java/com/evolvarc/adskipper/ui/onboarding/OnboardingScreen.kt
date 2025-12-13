@@ -14,8 +14,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -39,6 +42,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -115,6 +123,7 @@ fun OnboardingScreen(
         ) {
             when (it) {
                 OnboardingStep.Welcome -> WelcomeStep { viewModel.nextStep() }
+                OnboardingStep.Language -> LanguageSelectionStep { viewModel.saveLanguage(it) }
                 OnboardingStep.NotificationPermission -> NotificationPermissionStep { viewModel.nextStep() }
                 OnboardingStep.AccessibilityPermission -> AccessibilityPermissionStep { viewModel.nextStep() }
                 OnboardingStep.Claim -> ClaimScreen { onOnboardingFinished() }
@@ -343,6 +352,160 @@ fun WelcomeStep(onNext: () -> Unit) {
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+@Composable
+fun LanguageSelectionStep(onLanguageSelected: (String) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Icon with pulse animation
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+        val scale by infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.05f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1500),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "scale"
+        )
+
+        Card(
+            modifier = Modifier
+                .size(80.dp)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                }
+                .shadow(elevation = 8.dp, shape = RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(20.dp)),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            )
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Translate,
+                    contentDescription = "Language",
+                    tint = Color.White,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Select Language",
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.Bold
+            ),
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Choose your preferred language for skipping ads.\nEnglish is always enabled.",
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                LanguageOptionCard(
+                    name = "Auto-Detect (Recommended)",
+                    code = "ALL",
+                    isRecommended = true,
+                    onClick = { onLanguageSelected("ALL") }
+                )
+            }
+
+            items(com.evolvarc.adskipper.service.SkipTextManager.languages.sortedBy { it.displayName }) { language ->
+                LanguageOptionCard(
+                    name = language.displayName,
+                    code = language.code,
+                    isRecommended = false,
+                    onClick = { onLanguageSelected(language.code) }
+                )
+            }
+            
+            item { Spacer(modifier = Modifier.height(24.dp)) }
+        }
+    }
+}
+
+@Composable
+fun LanguageOptionCard(
+    name: String,
+    code: String,
+    isRecommended: Boolean,
+    onClick: () -> Unit
+) {
+    val borderColor = if (isRecommended) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+    val containerColor = if (isRecommended) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .border(if (isRecommended) 2.dp else 1.dp, borderColor, RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = if (isRecommended) FontWeight.Bold else FontWeight.Medium
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                
+                if (isRecommended) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = "Recommended",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+            
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 

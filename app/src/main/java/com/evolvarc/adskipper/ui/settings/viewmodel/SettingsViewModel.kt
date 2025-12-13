@@ -62,4 +62,13 @@ class SettingsViewModel @Inject constructor(
             userDataStore.setSkipDelay(delay)
         }
     }
+
+    val selectedLanguage: StateFlow<String> = userDataStore.selectedLanguage
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "ALL")
+
+    fun setSelectedLanguage(languageCode: String) {
+        viewModelScope.launch {
+            userDataStore.setSelectedLanguage(languageCode)
+        }
+    }
 }
