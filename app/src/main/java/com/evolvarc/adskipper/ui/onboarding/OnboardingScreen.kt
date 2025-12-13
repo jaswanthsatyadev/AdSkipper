@@ -11,6 +11,10 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Translate
+
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -42,7 +46,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.foundation.lazy.LazyColumn
@@ -96,20 +99,20 @@ fun OnboardingScreen(
     AnimatedContent(
         targetState = step,
         transitionSpec = {
-            (fadeIn(animationSpec = tween(400)) + 
-             slideInHorizontally(
-                 initialOffsetX = { fullWidth -> fullWidth },
-                 animationSpec = spring(
-                     dampingRatio = Spring.DampingRatioMediumBouncy,
-                     stiffness = Spring.StiffnessMedium
+             (fadeIn(animationSpec = tween(400)) + 
+              slideInHorizontally(
+                  initialOffsetX = { fullWidth -> fullWidth },
+                  animationSpec = spring(
+                      dampingRatio = Spring.DampingRatioMediumBouncy,
+                      stiffness = Spring.StiffnessMedium
+                  )
+              )).togetherWith(
+                 fadeOut(animationSpec = tween(200)) + 
+                 slideOutHorizontally(
+                     targetOffsetX = { fullWidth -> -fullWidth },
+                     animationSpec = tween(200)
                  )
-             )).togetherWith(
-                fadeOut(animationSpec = tween(200)) + 
-                slideOutHorizontally(
-                    targetOffsetX = { fullWidth -> -fullWidth },
-                    animationSpec = tween(200)
-                )
-            )
+             )
         },
         label = "onboardingStep"
     ) {
@@ -353,6 +356,8 @@ fun WelcomeStep(onNext: () -> Unit) {
 
         Spacer(modifier = Modifier.height(24.dp))
     }
+}
+
 @Composable
 fun LanguageSelectionStep(onLanguageSelected: (String) -> Unit) {
     Column(

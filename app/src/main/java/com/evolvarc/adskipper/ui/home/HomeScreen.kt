@@ -38,34 +38,32 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -73,10 +71,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.evolvarc.adskipper.R
-import com.evolvarc.adskipper.ui.home.viewmodel.HomeViewModel
 import com.evolvarc.adskipper.ui.theme.AdSkipperTheme
-import kotlinx.coroutines.delay
+import com.evolvarc.adskipper.ui.home.viewmodel.HomeViewModel
 
 @Composable
 fun HomeScreen(
@@ -87,28 +83,16 @@ fun HomeScreen(
 ) {
     val isServiceEnabled by viewModel.isServiceEnabled.collectAsStateWithLifecycle()
     val isYouTubeActive by viewModel.isYouTubeActive.collectAsStateWithLifecycle()
-    val totalAdsSkipped by viewModel.totalAdsSkipped.collectAsStateWithLifecycle(initialValue = 0)
-    // tutorial overlay removed — no first-visit overlay shown anymore
+    val totalAdsSkipped by viewModel.totalAdsSkipped.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            viewModel.checkServiceStatus()
-            delay(1000)
-        }
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        HomeScreenContent(
-            isServiceEnabled = isServiceEnabled,
-            isYouTubeActive = isYouTubeActive,
-            totalAdsSkipped = totalAdsSkipped,
-            paddingValues = paddingValues,
-            onNavigateToSettings = onNavigateToSettings,
-            onNavigateToHowItWorks = onNavigateToHowItWorks
-        )
-
-        // tutorial overlay intentionally disabled
-    }
+    HomeScreenContent(
+        isServiceEnabled = isServiceEnabled,
+        isYouTubeActive = isYouTubeActive,
+        totalAdsSkipped = totalAdsSkipped,
+        paddingValues = paddingValues,
+        onNavigateToSettings = onNavigateToSettings,
+        onNavigateToHowItWorks = onNavigateToHowItWorks
+    )
 }
 
 @Composable
@@ -120,107 +104,63 @@ fun HomeScreenContent(
     onNavigateToSettings: () -> Unit,
     onNavigateToHowItWorks: () -> Unit
 ) {
-    val context = LocalContext.current
-
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(paddingValues)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .background(Color(0xFFF5F5F5))
+            .padding(paddingValues) // Apply scaffold padding
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-            Spacer(modifier = Modifier.height(24.dp))
 
-            // Status Card - Material 3 Expressive Design with fade-in animation
-            AnimatedVisibility(
-                visible = true,
-                enter = fadeIn(animationSpec = tween(600)) + slideInVertically(
-                    initialOffsetY = { -40 },
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessLow
-                    )
-                )
-            ) {
-                StatusCard(
-                    isServiceEnabled = isServiceEnabled,
-                    isYouTubeActive = isYouTubeActive,
-                    modifier = Modifier.fillMaxWidth(0.9f)
-                )
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Warning Banner if Service Disabled
-            AnimatedVisibility(
-                visible = !isServiceEnabled,
-                enter = fadeIn(animationSpec = tween(400)) + slideInVertically(initialOffsetY = { -20 }),
-                exit = fadeOut(animationSpec = tween(300)) + slideOutVertically(targetOffsetY = { -20 })
-            ) {
-                Column {
-                    WarningBanner(
-                        onEnableClick = {
-                            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier.fillMaxWidth(0.9f)
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-            }
-
-            // Stats Card with fade-in animation
-            AnimatedVisibility(
-                visible = isServiceEnabled, // Only show stats if enabled or maybe always? keeping explicit
-                enter = fadeIn(animationSpec = tween(600, delayMillis = 150)) + slideInVertically(
-                    initialOffsetY = { -40 },
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessLow
-                    )
-                )
-            ) {
-                StatsCard(
-                    totalAdsSkipped = totalAdsSkipped,
-                    modifier = Modifier.fillMaxWidth(0.9f)
-                )
-            }
-            
-            if (isServiceEnabled) {
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Not Working Button - Enhanced
-                androidx.compose.material3.OutlinedButton(
-                    onClick = onNavigateToSettings,
-                    modifier = Modifier.height(40.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    ),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Info,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Not Working?",
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // How It Works Card
-            HowItWorksCard(
-                onNavigateToHowItWorks = onNavigateToHowItWorks,
-                modifier = Modifier.fillMaxWidth(0.9f)
+        // Title Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "AdSkipper",
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontWeight = FontWeight.Black,
+                    fontSize = 32.sp
+                ),
+                color = Color(0xFF1E88E5)
             )
-
-            Spacer(modifier = Modifier.height(32.dp))
+            
+            androidx.compose.material3.IconButton(onClick = onNavigateToSettings) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = "Settings",
+                    tint = Color(0xFF1E88E5),
+                    modifier = Modifier.size(28.dp)
+                )
+            }
         }
+
+        StatusCard(
+            isServiceEnabled = isServiceEnabled,
+            isYouTubeActive = isYouTubeActive
+        )
+
+        if (!isServiceEnabled) {
+            val context = LocalContext.current
+            WarningBanner(
+                onEnableClick = {
+                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                    context.startActivity(intent)
+                }
+            )
+        }
+
+        StatsCard(totalAdsSkipped = totalAdsSkipped)
+        
+        HowItWorksCard(onNavigateToHowItWorks = onNavigateToHowItWorks)
+        
+        Spacer(modifier = Modifier.height(80.dp))
+    }
 }
 
 @Composable
@@ -229,6 +169,7 @@ fun StatusCard(
     isYouTubeActive: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current // Get context here
     val statusText = when {
         !isServiceEnabled -> "Service Disabled"
         isYouTubeActive -> "AdSkipper Active"
@@ -324,10 +265,179 @@ fun StatusCard(
 }
 
 @Composable
+fun AnimatedStatusCircle(
+    isActive: Boolean,
+    isYouTubeActive: Boolean,
+    circleColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor by animateColorAsState(
+        targetValue = circleColor,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "statusCircleColor"
+    )
+
+    // Pulsing animation for active state
+    val scale = androidx.compose.runtime.remember { Animatable(1f) }
+    
+    LaunchedEffect(isYouTubeActive) {
+        if (isYouTubeActive) {
+            scale.animateTo(
+                targetValue = 1.1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            )
+            scale.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
+        } else {
+            scale.snapTo(1f)
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .clip(CircleShape)
+            .background(backgroundColor)
+            .padding(16.dp)
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        AnimatedContent(
+            targetState = if (isActive) {
+                if (isYouTubeActive) "▶" else "✓"
+            } else {
+                "✕"
+            },
+            label = "statusIcon"
+        ) { icon ->
+            Text(
+                text = icon,
+                color = Color.White,
+                fontSize = 60.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+fun WarningBanner(
+    onEnableClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Pulsing animation for attention
+    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
+    )
+
+    Card(
+        modifier = modifier
+            .shadow(elevation = 6.dp, shape = RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(18.dp))
+            .animateContentSize(spring(dampingRatio = Spring.DampingRatioMediumBouncy)),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFFFEBEE)  // Light red background
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Alert icon with pulse
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE53935))
+                    .graphicsLayer { alpha = pulseAlpha },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "⚠️",
+                    fontSize = 24.sp
+                )
+            }
+            
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Service Not Enabled",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = Color(0xFFDC2626)
+                )
+                
+                Text(
+                    text = "Enable accessibility service to start auto-skipping ads",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF991B1B)
+                )
+
+                val buttonInteraction = androidx.compose.runtime.remember { MutableInteractionSource() }
+                val isButtonPressed by buttonInteraction.collectIsPressedAsState()
+                val buttonScale by animateFloatAsState(
+                    targetValue = if (isButtonPressed) 0.94f else 1f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                    label = "buttonScale"
+                )
+
+                Button(
+                    onClick = onEnableClick,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFEF4444)
+                    ),
+                    interactionSource = buttonInteraction,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer {
+                            scaleX = buttonScale
+                            scaleY = buttonScale
+                        }
+                ) {
+                    Text(
+                        text = "Enable Now",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun StatsCard(
     totalAdsSkipped: Int,
     modifier: Modifier = Modifier
 ) {
+    // ... existing stats card ...
     // Blue Gradient
     val blueGradient = listOf(Color(0xFF42A5F5), Color(0xFF1565C0))
     

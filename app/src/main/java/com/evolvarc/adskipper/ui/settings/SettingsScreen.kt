@@ -111,6 +111,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import android.os.Build
+
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.TextButton
 import com.evolvarc.adskipper.service.SkipTextManager
@@ -123,7 +124,6 @@ fun SettingsScreen(
     paddingValues: PaddingValues = PaddingValues(),
     onNavigateToTroubleshoot: () -> Unit
 ) {
-    val context = LocalContext.current
     val isVibrateOnSkipEnabled by viewModel.vibrateOnSkip.collectAsStateWithLifecycle()
     val isShowNotificationEnabled by viewModel.showNotification.collectAsStateWithLifecycle()
     val skipDelay by viewModel.skipDelay.collectAsStateWithLifecycle()
@@ -668,7 +668,9 @@ fun BatteryOptimizationCard(
 @Composable
 fun SettingsScreenPreview() {
     AdSkipperTheme {
-        SettingsScreen()
+        SettingsScreen(
+            onNavigateToTroubleshoot = {}
+        )
     }
 }
 

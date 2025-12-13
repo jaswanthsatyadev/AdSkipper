@@ -46,9 +46,7 @@ class AdSkipperService : AccessibilityService() {
     private var originalVolume = -1
     private var isMuted = false
     private val NOTIFICATION_ID = 1
-    private val NOTIFICATION_ID = 1
     // private val notificationsEnabled = false // Removed hardcoded flag
-    private var isForegroundActive = false
     private var isForegroundActive = false
     private val serviceControlReceiver = ServiceControlReceiver()
     private var currentSkipTexts: Set<String> = emptySet()
@@ -203,7 +201,7 @@ class AdSkipperService : AccessibilityService() {
 
 
     private suspend fun findAndClickButton(node: AccessibilityNodeInfo) {
-        val searchStartTime = SystemClock.uptimeMillis()
+
         
         // Check if we just clicked recently
         val currentTime = SystemClock.uptimeMillis()
