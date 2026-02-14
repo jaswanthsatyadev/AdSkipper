@@ -2,6 +2,12 @@
 
 AdSkipper is a lightweight Android accessibility companion that automatically taps the **"Skip Ad"** button the moment it appears on YouTube, keeping playback smooth without modifying the YouTube app or blocking network traffic. The entire experience runs locally on your device, so no accounts, servers, or analytics are required.
 
+Download it from playstore
+
+Check out AdSkipper - Auto skip YouTube ads! 
+https://play.google.com/store/apps/details?id=com.evolvarc.adskipper
+
+
 ## Highlights
 
 - ⚡ **Instant skips** – configurable 0.1 s–0.5 s delay for natural interactions.
@@ -12,11 +18,15 @@ AdSkipper is a lightweight Android accessibility companion that automatically ta
 
 ## Features
 
-- Version: **v1.0.0**
+- Version: **v1.0.8**
 - Auto-skip YouTube ads using Accessibility Service (no modification of YouTube app)
 - Multi-language detection for skip buttons (supports English, Hindi, Spanish, Dutch, Polish, French, German, Russian, Japanese, Korean, Arabic, Thai, Vietnamese, Hungarian, Romanian, Swedish, Danish, Finnish, Norwegian, Ukrainian, Filipino (Tagalog), Bengali, Urdu, Portuguese, Italian and more)
+- In-app review system for better user ratings
+- Donation support with regional payment options (Razorpay for India, Buy Me a Coffee for international)
 - Configurable skip delay (default 0.1s) with 0.1s–0.5s options
 - Optional auto-mute during skips and haptic feedback
+- Improved ad context detection to prevent false clicks
+- Enhanced word boundary checks for accurate multilingual support
 - Privacy-first: runs entirely on-device, no accounts or external servers
 - Responsive Compose UI with onboarding, settings, and about screens
 - Foreground service with unobtrusive notification (manual Open App action)
@@ -55,10 +65,13 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 - `app/src/main/java/com/evolvarc/adskipper/data/**` – DataStore-based preference wrappers
 
 ## Support & Contact
+
+- Donate: https://razorpay.me/@jaswanthsatyadev (India)
+- Donate: https://buymeacoffee.com/jaswanthsatyadev (International)
 - LinkedIn: [linkedin.com/in/jaswanth-satya-dev](https://www.linkedin.com/in/jaswanth-satya-dev/)
 - X (Twitter): [@jaswanthsatydev](https://x.com/jaswanthsatydev)
 - GitHub: [github.com/jaswanthsatyadev/AdSkipper](https://github.com/jaswanthsatyadev/AdSkipper)
-- Email: [contact@evolvarc.com](mailto:contact@evolvarc.com)
+- Email: [adskipper@evolvarc.com](mailto:adskipper@evolvarc.com)
 
 ## License
 Released under the **AdSkipper Non-Commercial License**. See [`LICENSE.md`](LICENSE.md) for full terms. Commercial use requires written permission from Jaswanth Satya Dev.

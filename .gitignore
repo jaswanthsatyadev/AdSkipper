@@ -27,6 +27,7 @@
 /app/debug/
 /app/*.apk
 /app/*.aab
+/RELEASE_INSTRUCTIONS.md 
 
 # Outputs
 /app/outputs/
