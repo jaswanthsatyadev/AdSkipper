@@ -13,8 +13,8 @@ android {
         applicationId = "com.evolvarc.adskipper"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 8
+        versionName = "1.0.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -60,6 +60,8 @@ dependencies {
     kapt(libs.hilt.compiler)
     implementation(libs.accompanist.permissions)
     implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.play.review)
+    implementation(libs.play.review.ktx)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

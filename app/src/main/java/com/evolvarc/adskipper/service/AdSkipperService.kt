@@ -86,23 +86,12 @@ class AdSkipperService : AccessibilityService() {
                 }
             }
 
-            // Start foreground notification dynamically based on DataStore
+            // Removed automatic startForeground on connection. 
+            // We wait for YouTube to be detected.
+            // Check DataStore but don't show notification yet.
             serviceScope.launch {
-                try {
-                    if (userDataStore.showNotification.first()) {
-                        NotificationManager.createNotificationChannel(this@AdSkipperService)
-                        val adsSkipped = userDataStore.totalAdsSkipped.first()
-                        val notification = NotificationManager.getNotificationActive(
-                            this@AdSkipperService,
-                            adsSkipped,
-                            "YouTube"
-                        )
-                        startForeground(NOTIFICATION_ID, notification)
-                        isForegroundActive = true
-                        Log.d(TAG, "Foreground notification started")
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error starting foreground notification: ${e.message}", e)
+                if (userDataStore.showNotification.first()) {
+                     NotificationManager.createNotificationChannel(this@AdSkipperService)
                 }
             }
 
@@ -127,27 +116,43 @@ class AdSkipperService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         try {
-            val packageName = event?.packageName?.toString()
+            val packageName = event?.packageName?.toString() ?: return
+            
+            // Ignore SystemUI events (notification shade, volume controls, etc.)
+            // so we don't think we left YouTube just because the user adjusted volume.
+            if (packageName == "com.android.systemui" || packageName == "android") {
+                return
+            }
+
             val isYouTube = packageName == "com.google.android.youtube"
 
-            // Smart Notification Logic:
-            // If we switch TO YouTube, show notification (if enabled).
-            // If we switch AWAY from YouTube, hide notification (stopForeground).
-            if (isYouTube && !isYouTubeActive) {
-                isYouTubeActive = true
-                Log.d(TAG, "YouTube detected - Activating service UI")
-                updateNotification() // Promotes to foreground
-            } else if (!isYouTube && isYouTubeActive && packageName != null) {
-                // We switched to another app (ignore null package names which might be system overlays)
-                isYouTubeActive = false
-                Log.d(TAG, "Exited YouTube (Active: $packageName) - Hiding service UI")
-                stopForegroundSafely()
+            // Smart Notification & Service Lifecycle Logic:
+            if (isYouTube) {
+                if (!isYouTubeActive) {
+                    isYouTubeActive = true
+                    Log.d(TAG, "YouTube detected ($packageName) - Activating service UI")
+                    updateNotification(true) // Start Foreground
+                }
+                // Refresh/Keep-alive logical timestamp if needed
+            } else {
+                // We are in another app (and it's not SystemUI).
+                // Only disable if we were previously active AND it's a significant window change.
+                if (isYouTubeActive) {
+                    // Only WINDOW_STATE_CHANGED consistently signals an Activity switch.
+                    // Content changes from keyboards (Gboard) or other overlays shouldn't kill the service.
+                    if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                        isYouTubeActive = false
+                        Log.d(TAG, "Exited YouTube (Active: $packageName) - Hiding service UI")
+                        stopForegroundSafely()
+                    }
+                }
             }
 
-            // Only process skipping logic if YouTube is active
-            if (!isYouTubeActive && packageName != "com.google.android.youtube") {
+            // ONLY process ad logic if we are strictly in YouTube
+            if (!isYouTube) {
                 return 
             }
+            // Logic continues...
 
             // Throttle events
             val currentTime = SystemClock.uptimeMillis()
@@ -301,18 +306,31 @@ class AdSkipperService : AccessibilityService() {
              return true
         }
 
-        // 2. Contains Match (Iterate Set - still fast in memory)
+        // 2. Contains Match with Word Boundary Check (Iterate Set - still fast in memory)
         // Only if we haven't found exact match.
         // Helpful for "Skip Ad in 5s" type buttons if they become clickable text.
+        // IMPORTANT: Use word boundaries to avoid false matches (e.g., "pular" in "popular")
         val textLower = text.lowercase()
         val descLower = desc.lowercase()
         
         for (skipText in currentSkipTexts) {
              val skipLower = skipText.lowercase()
-             // Check if node text contains the skip word (e.g. "Skip Ad" inside "Skip Ad >>")
-             if ((textLower.isNotEmpty() && textLower.contains(skipLower)) || 
-                 (descLower.isNotEmpty() && descLower.contains(skipLower))) {
+             
+             // Word boundary check: Ensure the skip text is a complete word, not a substring
+             // This prevents "pular" from matching "popular"
+             val textMatches = textLower.isNotEmpty() && 
+                 (textLower == skipLower || // Exact match
+                  textLower.startsWith("$skipLower ") || // "skip ad" or "skip >"
+                  textLower.endsWith(" $skipLower") || // "ad skip"
+                  textLower.contains(" $skipLower ")) // "some skip text"
                   
+             val descMatches = descLower.isNotEmpty() && 
+                 (descLower == skipLower || 
+                  descLower.startsWith("$skipLower ") || 
+                  descLower.endsWith(" $skipLower") || 
+                  descLower.contains(" $skipLower "))
+             
+             if (textMatches || descMatches) {
                   // Extra check: If it's a partial match, ensure it REALLY looks like a button
                   if (node.className?.contains("Button") == true || 
                       viewId.contains("button") || 
@@ -358,14 +376,19 @@ class AdSkipperService : AccessibilityService() {
             return true
         }
 
-        // If no ad indicators, we skip the heavy manual sort.
-        // But wait, the "Skip" button itself is an indicator.
-        // Layer 1&2 already checked for the explicit button ID.
-        // If we are here, it means we don't have the standard ID.
-        // So we are looking for non-standard buttons (other languages/layouts).
-        // It's safer to proceed with the scan but ensure checkNodeForSkipText is strict.
+        // Additional check: Look for "Ad" text which is common in ad context
+        val adNodes = node.findAccessibilityNodeInfosByText("Ad")
+        if (adNodes.isNotEmpty()) {
+            adNodes.forEach { it.recycle() }
+            return true
+        }
+
+        // If no ad indicators found, we are NOT in an ad context.
+        // This prevents clicking on non-ad buttons (like "Popular" on channel pages)
+        // Layer 1&2 already checked for the explicit skip button IDs.
+        // Only proceed with text scanning if we confirmed we're in an ad context.
         
-        return true // For now, keep permissive but rely on exact Set match in traverse
+        return false // Only process when we're actually in an ad context
     }
     
     // Dead code removed: searchForIndicator, checkForAdIndicators, findNodeByContentDescription, findButtonInTopRightQuadrant, findButtonInRegion
@@ -410,7 +433,7 @@ class AdSkipperService : AccessibilityService() {
                     }
                 }
 
-                updateNotification()
+                updateNotification(true)
 
                 // Unmute after a delay if auto-mute was enabled
                 if (isAutoMuteEnabled) {
@@ -469,14 +492,27 @@ class AdSkipperService : AccessibilityService() {
 
     // ... (previous code)
 
-    private fun updateNotification() {
-        // Check DataStore preference in the coroutine instead of a hardcoded flag
+    private fun updateNotification(shouldStartForeground: Boolean) {
         serviceScope.launch {
             if (userDataStore.showNotification.first()) {
                 val adsSkipped = userDataStore.totalAdsSkipped.first()
-                val notification = NotificationManager.getNotification(this@AdSkipperService, adsSkipped)
-                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-                notificationManager.notify(NOTIFICATION_ID, notification)
+                val notification = NotificationManager.getNotificationActive(
+                    this@AdSkipperService, 
+                    adsSkipped, 
+                    "YouTube"
+                )
+                
+                if (shouldStartForeground) {
+                    try {
+                        startForeground(NOTIFICATION_ID, notification)
+                        isForegroundActive = true
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error starting foreground: ${e.message}")
+                    }
+                } else {
+                    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+                    notificationManager.notify(NOTIFICATION_ID, notification)
+                }
             }
         }
     }

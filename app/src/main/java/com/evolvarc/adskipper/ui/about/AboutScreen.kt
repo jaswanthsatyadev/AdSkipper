@@ -1,6 +1,7 @@
 package com.evolvarc.adskipper.ui.about
 
 import android.content.Intent
+import android.app.Activity
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,11 +34,20 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -52,6 +63,7 @@ import androidx.compose.ui.unit.sp
 import com.evolvarc.adskipper.R
 import com.evolvarc.adskipper.ui.theme.AdSkipperTheme
 import com.evolvarc.adskipper.utils.AppUtils
+import com.google.android.play.core.review.ReviewManagerFactory
 
 @Composable
 fun AboutScreen(
@@ -60,6 +72,7 @@ fun AboutScreen(
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val appVersion = AppUtils.getAppVersion(context)
+    var showDonationDialog by remember { mutableStateOf(false) }
     
     Column(
         modifier = Modifier
@@ -213,7 +226,14 @@ fun AboutScreen(
                 title = "GitHub",
                 value = "github.com/jaswanthsatyadev/AdSkipper",
                 iconBgColor = Color(0xFF24292E),
-                iconContent = { GitHubGlyph() },
+                iconContent = { 
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_github),
+                        contentDescription = "GitHub",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
                 onClick = {
                     uriHandler.openUri("https://github.com/jaswanthsatyadev/AdSkipper")
                 }
@@ -267,10 +287,32 @@ fun AboutScreen(
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             InfoItemCard(
                 icon = Icons.Filled.Star,
-                title = "Rate on Play Store",
-                value = "Help us grow",
+                title = "Please give us a 5 star rating",
+                value = "on Play Store",
                 iconBgColor = Color(0xFFFCD34D),
-                showArrow = true
+                showArrow = true,
+                onClick = {
+                    // Try in-app review first
+                    val reviewManager = ReviewManagerFactory.create(context)
+                    val requestReviewFlow = reviewManager.requestReviewFlow()
+                    
+                    requestReviewFlow.addOnCompleteListener { request ->
+                        if (request.isSuccessful) {
+                            // Launch the in-app review flow
+                            val reviewInfo = request.result
+                            val activity = context as? Activity
+                            if (activity != null) {
+                                reviewManager.launchReviewFlow(activity, reviewInfo)
+                            } else {
+                                // Fallback to Play Store if not an Activity context
+                                openPlayStore(context)
+                            }
+                        } else {
+                            // Fallback to Play Store if in-app review fails
+                            openPlayStore(context)
+                        }
+                    }
+                }
             )
 
             InfoItemCard(
@@ -289,6 +331,13 @@ fun AboutScreen(
                 showArrow = true
             )
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Donation Section
+        DonationCard(
+            onClick = { showDonationDialog = true }
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -323,6 +372,256 @@ fun AboutScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
     }
+    
+    // Donation Dialog
+    if (showDonationDialog) {
+        DonationDialog(
+            onDismiss = { showDonationDialog = false },
+            onIndiaClick = {
+                showDonationDialog = false
+                uriHandler.openUri("https://razorpay.me/@jaswanthsatyadev")
+            },
+            onOtherCountriesClick = {
+                showDonationDialog = false
+                uriHandler.openUri("https://buymeacoffee.com/jaswanthsatyadev")
+            }
+        )
+    }
+}
+
+@Composable
+fun DonationCard(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(elevation = 8.dp, shape = RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(20.dp))
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = Color.Transparent
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFFFF6B6B),
+                            Color(0xFFFF8E53)
+                        )
+                    )
+                )
+                .padding(20.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Heart Icon with pulsing effect
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "☕",
+                        fontSize = 32.sp
+                    )
+                }
+
+                Text(
+                    text = "Support the Developer",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp
+                    ),
+                    color = Color.White,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    text = "AdSkipper is free forever! Your support helps keep it ad-free and frequently updated.",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp
+                    ),
+                    color = Color.White.copy(alpha = 0.95f),
+                    textAlign = TextAlign.Center
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White)
+                        .padding(vertical = 14.dp, horizontal = 20.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Favorite,
+                            contentDescription = null,
+                            tint = Color(0xFFFF6B6B),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Buy Me a Coffee",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            ),
+                            color = Color(0xFFFF6B6B)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DonationDialog(
+    onDismiss: () -> Unit,
+    onIndiaClick: () -> Unit,
+    onOtherCountriesClick: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "☕",
+                    fontSize = 48.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Choose Your Region",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    textAlign = TextAlign.Center
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Thank you for supporting AdSkipper! Select your preferred payment method:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // India Option
+                Button(
+                    onClick = onIndiaClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF0F9D58)
+                    ),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "🇮🇳",
+                            fontSize = 24.sp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(
+                            horizontalAlignment = Alignment.Start
+                        ) {
+                            Text(
+                                text = "India (Razorpay)",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = Color.White
+                            )
+                            Text(
+                                text = "UPI, Cards, NetBanking",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.9f)
+                            )
+                        }
+                    }
+                }
+                
+                // Other Countries Option
+                Button(
+                    onClick = onOtherCountriesClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFFDD00)
+                    ),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "🌍",
+                            fontSize = 24.sp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(
+                            horizontalAlignment = Alignment.Start
+                        ) {
+                            Text(
+                                text = "Other Countries",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = Color.Black
+                            )
+                            Text(
+                                text = "Buy Me a Coffee (PayPal, Cards)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Black.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Maybe Later")
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(24.dp)
+    )
 }
 
 @Composable
@@ -434,53 +733,7 @@ fun XGlyph() {
     )
 }
 
-@Composable
-fun GitHubGlyph() {
-    Canvas(modifier = Modifier.size(26.dp)) {
-        val bg = Color.White
-        val accent = Color(0xFF24292E)
-        val headRadius = size.minDimension / 2.6f
-        val center = Offset(size.width / 2f, size.height / 2f + 1.5f)
-        val earWidth = headRadius * 0.9f
-        val earHeight = headRadius * 0.9f
 
-        val leftEar = Path().apply {
-            moveTo(center.x - earWidth, center.y - headRadius)
-            lineTo(center.x - earWidth * 0.4f, center.y - headRadius * 0.4f)
-            lineTo(center.x - earWidth * 1.2f, center.y - headRadius * 0.3f)
-            close()
-        }
-        val rightEar = Path().apply {
-            moveTo(center.x + earWidth, center.y - headRadius)
-            lineTo(center.x + earWidth * 0.4f, center.y - headRadius * 0.4f)
-            lineTo(center.x + earWidth * 1.2f, center.y - headRadius * 0.3f)
-            close()
-        }
-
-        drawPath(leftEar, bg)
-        drawPath(rightEar, bg)
-        drawCircle(color = bg, radius = headRadius, center = center)
-
-        drawCircle(
-            color = accent,
-            radius = headRadius * 0.2f,
-            center = center + Offset(-headRadius * 0.45f, -headRadius * 0.1f)
-        )
-        drawCircle(
-            color = accent,
-            radius = headRadius * 0.2f,
-            center = center + Offset(headRadius * 0.45f, -headRadius * 0.1f)
-        )
-
-        drawLine(
-            color = accent,
-            start = center + Offset(-headRadius * 0.5f, headRadius * 0.4f),
-            end = center + Offset(headRadius * 0.5f, headRadius * 0.4f),
-            strokeWidth = headRadius * 0.25f,
-            cap = StrokeCap.Round
-        )
-    }
-}
 
 @Composable
 fun PrivacyFeature(icon: String, text: String) {
@@ -497,6 +750,23 @@ fun PrivacyFeature(icon: String, text: String) {
             ),
             color = Color(0xFF2E7D32)
         )
+    }
+}
+
+// Helper function to open Play Store
+private fun openPlayStore(context: android.content.Context) {
+    try {
+        val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
+            data = android.net.Uri.parse("market://details?id=com.evolvarc.adskipper")
+            setPackage("com.android.vending")
+        }
+        context.startActivity(playStoreIntent)
+    } catch (e: Exception) {
+        // Fallback to browser if Play Store app is not available
+        val browserIntent = Intent(Intent.ACTION_VIEW).apply {
+            data = android.net.Uri.parse("https://play.google.com/store/apps/details?id=com.evolvarc.adskipper")
+        }
+        context.startActivity(browserIntent)
     }
 }
 

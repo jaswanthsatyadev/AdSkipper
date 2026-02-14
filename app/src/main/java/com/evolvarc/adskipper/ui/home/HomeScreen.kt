@@ -4,6 +4,10 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
@@ -57,6 +61,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,6 +91,20 @@ fun HomeScreen(
     val isYouTubeActive by viewModel.isYouTubeActive.collectAsStateWithLifecycle()
     val totalAdsSkipped by viewModel.totalAdsSkipped.collectAsStateWithLifecycle()
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.checkServiceStatus()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     HomeScreenContent(
         isServiceEnabled = isServiceEnabled,
         isYouTubeActive = isYouTubeActive,
@@ -104,6 +124,127 @@ fun HomeScreenContent(
     onNavigateToSettings: () -> Unit,
     onNavigateToHowItWorks: () -> Unit
 ) {
+    val context = LocalContext.current
+    var showDisclosureDialog by remember { mutableStateOf(false) }
+
+    if (showDisclosureDialog) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showDisclosureDialog = false }
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = null,
+                        tint = Color(0xFF1E88E5),
+                        modifier = Modifier.size(48.dp)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        text = "Accessibility Service Disclosure",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        textAlign = TextAlign.Center
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFFF5F5F5)
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Why we use this permission:",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                color = Color.Black
+                            )
+                            Text(
+                                text = "To automatically detect and skip YouTube ads.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFF616161)
+                            )
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            Text(
+                                text = "How it works:",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                color = Color.Black
+                            )
+                            Text(
+                                text = "AdSkipper detects the 'Skip Ad' button on your screen and creates a tap action to skip it.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFF616161)
+                            )
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Text(
+                                text = "What data is collected:",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                color = Color.Black
+                            )
+                            Text(
+                                text = "No data is collected or shared. The service runs locally on your device.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFF616161)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = { showDisclosureDialog = false },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF1E88E5)),
+                             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF1E88E5))
+                        ) {
+                             Text("Decline")
+                        }
+
+                        Button(
+                            onClick = {
+                                showDisclosureDialog = false
+                                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                context.startActivity(intent)
+                            },
+                             modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E88E5))
+                        ) {
+                            Text("Accept")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -146,11 +287,9 @@ fun HomeScreenContent(
         )
 
         if (!isServiceEnabled) {
-            val context = LocalContext.current
             WarningBanner(
                 onEnableClick = {
-                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                    context.startActivity(intent)
+                    showDisclosureDialog = true
                 }
             )
         }

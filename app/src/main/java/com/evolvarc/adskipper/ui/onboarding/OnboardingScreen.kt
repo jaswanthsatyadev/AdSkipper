@@ -119,7 +119,6 @@ fun OnboardingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
                 .background(MaterialTheme.colorScheme.background),
             verticalArrangement = Arrangement.SpaceEvenly,
             horizontalAlignment = Alignment.CenterHorizontally
@@ -128,6 +127,7 @@ fun OnboardingScreen(
                 OnboardingStep.Welcome -> WelcomeStep { viewModel.nextStep() }
                 OnboardingStep.Language -> LanguageSelectionStep { viewModel.saveLanguage(it) }
                 OnboardingStep.NotificationPermission -> NotificationPermissionStep { viewModel.nextStep() }
+                OnboardingStep.BatteryOptimization -> BatteryOptimizationStep { viewModel.nextStep() }
                 OnboardingStep.AccessibilityPermission -> AccessibilityPermissionStep { viewModel.nextStep() }
                 OnboardingStep.Claim -> ClaimScreen { onOnboardingFinished() }
             }
@@ -140,6 +140,7 @@ fun WelcomeStep(onNext: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -436,7 +437,6 @@ fun LanguageSelectionStep(onLanguageSelected: (String) -> Unit) {
             item {
                 LanguageOptionCard(
                     name = "Auto-Detect (Recommended)",
-                    code = "ALL",
                     isRecommended = true,
                     onClick = { onLanguageSelected("ALL") }
                 )
@@ -445,7 +445,6 @@ fun LanguageSelectionStep(onLanguageSelected: (String) -> Unit) {
             items(com.evolvarc.adskipper.service.SkipTextManager.languages.sortedBy { it.displayName }) { language ->
                 LanguageOptionCard(
                     name = language.displayName,
-                    code = language.code,
                     isRecommended = false,
                     onClick = { onLanguageSelected(language.code) }
                 )
@@ -459,7 +458,6 @@ fun LanguageSelectionStep(onLanguageSelected: (String) -> Unit) {
 @Composable
 fun LanguageOptionCard(
     name: String,
-    code: String,
     isRecommended: Boolean,
     onClick: () -> Unit
 ) {
@@ -571,6 +569,7 @@ fun NotificationPermissionStep(onNext: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -648,6 +647,7 @@ fun NotificationPermissionStep(onNext: () -> Unit) {
 fun AccessibilityPermissionStep(onOnboardingFinished: () -> Unit) {
     val context = LocalContext.current
     var isServiceEnabled by androidx.compose.runtime.remember { mutableStateOf(false) }
+    var hasConsented by androidx.compose.runtime.remember { mutableStateOf(false) }
     
     // Auto-detect accessibility service state
     LaunchedEffect(Unit) {
@@ -665,172 +665,280 @@ fun AccessibilityPermissionStep(onOnboardingFinished: () -> Unit) {
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Icon with status indicator
-        Box(contentAlignment = Alignment.TopEnd) {
+    // Interactive Disclosure UI
+    if (!isServiceEnabled && !hasConsented) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Settings,
+                contentDescription = "Accessibility",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(64.dp)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Accessibility Service Disclosure",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold
+                ),
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Card(
-                modifier = Modifier
-                    .size(100.dp)
-                    .shadow(elevation = 8.dp, shape = RoundedCornerShape(24.dp))
-                    .clip(RoundedCornerShape(24.dp))
-                    .animateContentSize(),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (isServiceEnabled) 
-                        Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary
-                )
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = if (isServiceEnabled) Icons.Filled.Check else Icons.Filled.Settings,
-                        contentDescription = "Accessibility",
-                        tint = Color.White,
-                        modifier = Modifier.size(48.dp)
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Why we use this permission:",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Text(
+                        text = "To automatically detect and skip YouTube ads.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Text(
+                        text = "How it works:",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Text(
+                        text = "AdSkipper detects the 'Skip Ad' button on your screen and creates a tap action to skip it.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "What data is collected:",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Text(
+                        text = "No data is collected or shared. The service runs locally on your device.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
             
-            // Status badge
-            if (isServiceEnabled) {
-                Box(
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { /* User denied - stay here */ },
                     modifier = Modifier
-                        .size(24.dp)
-                        .offset(x = 8.dp, y = (-8).dp)
-                        .background(Color(0xFF4CAF50), CircleShape)
-                        .border(2.dp, Color.White, CircleShape),
-                    contentAlignment = Alignment.Center
+                        .weight(1f)
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("✓", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text("Decline")
+                }
+
+                Button(
+                    onClick = { hasConsented = true },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("I Agree")
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        AnimatedContent(
-            targetState = isServiceEnabled,
-            label = "titleAnimation"
-        ) { enabled ->
-            Text(
-                text = if (enabled) "Service Enabled!" else "Enable Accessibility Service",
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 28.sp
-                ),
-                textAlign = TextAlign.Center,
-                color = if (enabled) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onBackground
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        AnimatedContent(
-            targetState = isServiceEnabled,
-            label = "descAnimation"
-        ) { enabled ->
-            Text(
-                text = if (enabled) 
-                    "Great! AdSkipper is ready to skip ads automatically."
-                else
-                    "AdSkipper needs accessibility access to detect and skip ads for you.",
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Progress indicator
-        Card(
+    } else {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            )
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
+            // Icon with status indicator
+            Box(contentAlignment = Alignment.TopEnd) {
+                Card(
                     modifier = Modifier
-                        .size(12.dp)
-                        .background(
-                            if (isServiceEnabled) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
-                            CircleShape
+                        .size(100.dp)
+                        .shadow(elevation = 8.dp, shape = RoundedCornerShape(24.dp))
+                        .clip(RoundedCornerShape(24.dp))
+                        .animateContentSize(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isServiceEnabled) 
+                            Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = if (isServiceEnabled) Icons.Filled.Check else Icons.Filled.Settings,
+                            contentDescription = "Accessibility",
+                            tint = Color.White,
+                            modifier = Modifier.size(48.dp)
                         )
-                        .animateContentSize()
-                )
-                Spacer(modifier = Modifier.width(12.dp))
+                    }
+                }
+                
+                // Status badge
+                if (isServiceEnabled) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .offset(x = 8.dp, y = (-8).dp)
+                            .background(Color(0xFF4CAF50), CircleShape)
+                            .border(2.dp, Color.White, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("✓", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            AnimatedContent(
+                targetState = isServiceEnabled,
+                label = "titleAnimation"
+            ) { enabled ->
                 Text(
-                    text = if (isServiceEnabled) "Connected" else "Waiting for permission...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (isServiceEnabled) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isServiceEnabled) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface
+                    text = if (enabled) "Service Enabled!" else "Enable Accessibility Service",
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 28.sp
+                    ),
+                    textAlign = TextAlign.Center,
+                    color = if (enabled) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onBackground
                 )
             }
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        if (!isServiceEnabled) {
-            // Steps with enhanced animations
-            StepCard(number = "1", text = "Tap 'Open Settings' below")
-            Spacer(modifier = Modifier.height(12.dp))
-            StepCard(number = "2", text = "Click 'Downloaded Apps' section")
-            Spacer(modifier = Modifier.height(12.dp))
-            StepCard(number = "3", text = "Find 'AdSkipper' in the list")
-            Spacer(modifier = Modifier.height(12.dp))
-            StepCard(number = "4", text = "Toggle it ON and come back")
+            AnimatedContent(
+                targetState = isServiceEnabled,
+                label = "descAnimation"
+            ) { enabled ->
+                Text(
+                    text = if (enabled) 
+                        "Great! AdSkipper is ready to skip ads automatically."
+                    else
+                        "AdSkipper needs accessibility access to detect and skip ads for you.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            Button(
-                onClick = { 
-                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                    context.startActivity(intent)
-                },
+            // Progress indicator
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                ),
-                shape = RoundedCornerShape(12.dp)
+                    .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp)),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                )
             ) {
-                Icon(Icons.Filled.Settings, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .background(
+                                if (isServiceEnabled) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
+                                CircleShape
+                            )
+                            .animateContentSize()
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = if (isServiceEnabled) "Connected" else "Waiting for permission...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (isServiceEnabled) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isServiceEnabled) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            if (!isServiceEnabled) {
+                // Steps with enhanced animations
+                StepCard(number = "1", text = "Tap 'Open Settings' below")
+                Spacer(modifier = Modifier.height(12.dp))
+                StepCard(number = "2", text = "Click 'Downloaded Apps' section")
+                Spacer(modifier = Modifier.height(12.dp))
+                StepCard(number = "3", text = "Find 'AdSkipper' in the list")
+                Spacer(modifier = Modifier.height(12.dp))
+                StepCard(number = "4", text = "Toggle it ON and come back")
+
+                Spacer(modifier = Modifier.height(40.dp))
+
+                Button(
+                    onClick = { 
+                        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Filled.Settings, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Open Settings",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            } else {
+                // Show success state
+                Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Open Settings",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
+                    text = "Redirecting to app...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        } else {
-            // Show success state
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "Redirecting to app...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+        }
     }
 }
 
@@ -894,5 +1002,124 @@ fun PrivacyBadge(icon: String, text: String) {
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurface
         )
+    }
+}
+
+@Composable
+fun BatteryOptimizationStep(onNext: () -> Unit) {
+    val context = LocalContext.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    var isOptimized by androidx.compose.runtime.remember { 
+        mutableStateOf(!com.evolvarc.adskipper.utils.BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)) 
+    }
+
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                isOptimized = !com.evolvarc.adskipper.utils.BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)
+                if (!isOptimized) {
+                    onNext()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Card(
+             modifier = Modifier
+                .size(100.dp)
+                .shadow(elevation = 8.dp, shape = RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(24.dp)),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFFF9800)
+            )
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = "Battery",
+                    tint = Color.White,
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Text(
+            text = "Don't Let Me Die",
+            style = MaterialTheme.typography.headlineLarge.copy(
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 28.sp
+            ),
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "To skip ads in the background, AdSkipper needs 'Unrestricted' battery access.",
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Card(
+             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f)),
+             shape = RoundedCornerShape(8.dp)
+        ) {
+             Text(
+                text = "Tap 'Allow' or select 'No Restrictions' in the next dialog.",
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(12.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        Button(
+            onClick = { 
+                com.evolvarc.adskipper.utils.BatteryOptimizationHelper.requestBatteryOptimizationExemption(context)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFFF9800)
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(
+                text = "Disable Battery Limits",
+                style = MaterialTheme.typography.labelLarge,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        androidx.compose.material3.TextButton(onClick = onNext) {
+             Text("Skip for now", color = Color.Gray)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
