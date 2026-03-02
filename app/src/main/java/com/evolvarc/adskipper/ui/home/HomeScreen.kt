@@ -90,6 +90,7 @@ fun HomeScreen(
     val isServiceEnabled by viewModel.isServiceEnabled.collectAsStateWithLifecycle()
     val isYouTubeActive by viewModel.isYouTubeActive.collectAsStateWithLifecycle()
     val totalAdsSkipped by viewModel.totalAdsSkipped.collectAsStateWithLifecycle()
+    val appOpenCount by viewModel.appOpenCount.collectAsStateWithLifecycle()
 
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -109,6 +110,7 @@ fun HomeScreen(
         isServiceEnabled = isServiceEnabled,
         isYouTubeActive = isYouTubeActive,
         totalAdsSkipped = totalAdsSkipped,
+        appOpenCount = appOpenCount,
         paddingValues = paddingValues,
         onNavigateToSettings = onNavigateToSettings,
         onNavigateToHowItWorks = onNavigateToHowItWorks
@@ -120,12 +122,25 @@ fun HomeScreenContent(
     isServiceEnabled: Boolean,
     isYouTubeActive: Boolean,
     totalAdsSkipped: Int,
+    appOpenCount: Int,
     paddingValues: PaddingValues = PaddingValues(),
     onNavigateToSettings: () -> Unit,
     onNavigateToHowItWorks: () -> Unit
 ) {
     val context = LocalContext.current
+    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     var showDisclosureDialog by remember { mutableStateOf(false) }
+    var showDonationDialog by remember { mutableStateOf(false) }
+    var hasShownDonationThisSession by remember { mutableStateOf(false) }
+
+    LaunchedEffect(appOpenCount) {
+        if (appOpenCount > 0 && appOpenCount % 2 == 0 && !hasShownDonationThisSession) {
+            // Add a small delay so it doesn't pop up immediately before the UI is ready
+            kotlinx.coroutines.delay(1000)
+            showDonationDialog = true
+            hasShownDonationThisSession = true
+        }
+    }
 
     if (showDisclosureDialog) {
         androidx.compose.ui.window.Dialog(
@@ -299,6 +314,20 @@ fun HomeScreenContent(
         HowItWorksCard(onNavigateToHowItWorks = onNavigateToHowItWorks)
         
         Spacer(modifier = Modifier.height(80.dp))
+    }
+
+    if (showDonationDialog) {
+        com.evolvarc.adskipper.ui.about.DonationDialog(
+            onDismiss = { showDonationDialog = false },
+            onIndiaClick = {
+                showDonationDialog = false
+                uriHandler.openUri("https://razorpay.me/@jaswanthsatyadev")
+            },
+            onOtherCountriesClick = {
+                showDonationDialog = false
+                uriHandler.openUri("https://buymeacoffee.com/jaswanthsatyadev")
+            }
+        )
     }
 }
 
@@ -718,6 +747,7 @@ fun HomeScreenPreview() {
             isServiceEnabled = true,
             isYouTubeActive = true,
             totalAdsSkipped = 1247,
+            appOpenCount = 0,
             onNavigateToSettings = {},
             onNavigateToHowItWorks = {}
         )

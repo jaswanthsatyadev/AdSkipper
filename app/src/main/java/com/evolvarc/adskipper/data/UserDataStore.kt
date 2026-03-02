@@ -27,6 +27,18 @@ class UserDataStore(context: Context) {
         val ONBOARDING_COMPLETE_KEY = booleanPreferencesKey("onboarding_complete")
         val IS_FIRST_HOME_SCREEN_VISIT_KEY = booleanPreferencesKey("is_first_home_screen_visit")
         val SELECTED_LANGUAGE_KEY = androidx.datastore.preferences.core.stringPreferencesKey("selected_language")
+        val APP_OPEN_COUNT_KEY = intPreferencesKey("app_open_count")
+    }
+
+    val appOpenCount: Flow<Int> = dataStore.data.map { preferences ->
+        preferences[APP_OPEN_COUNT_KEY] ?: 0
+    }
+
+    suspend fun incrementAppOpenCount() {
+        dataStore.edit {
+            val currentCount = it[APP_OPEN_COUNT_KEY] ?: 0
+            it[APP_OPEN_COUNT_KEY] = currentCount + 1
+        }
     }
 
     val autoMuteAds: Flow<Boolean> = dataStore.data.map {

@@ -58,6 +58,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
+        lifecycleScope.launch {
+            userDataStore.incrementAppOpenCount()
+        }
+        
         setContent {
             AdSkipperTheme {
                 // Use null as initial state to show loading screen instead of guessing

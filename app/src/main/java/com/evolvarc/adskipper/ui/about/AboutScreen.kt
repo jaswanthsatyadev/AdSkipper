@@ -1,7 +1,6 @@
 package com.evolvarc.adskipper.ui.about
 
 import android.content.Intent
-import android.app.Activity
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -63,7 +62,6 @@ import androidx.compose.ui.unit.sp
 import com.evolvarc.adskipper.R
 import com.evolvarc.adskipper.ui.theme.AdSkipperTheme
 import com.evolvarc.adskipper.utils.AppUtils
-import com.google.android.play.core.review.ReviewManagerFactory
 
 @Composable
 fun AboutScreen(
@@ -292,26 +290,7 @@ fun AboutScreen(
                 iconBgColor = Color(0xFFFCD34D),
                 showArrow = true,
                 onClick = {
-                    // Try in-app review first
-                    val reviewManager = ReviewManagerFactory.create(context)
-                    val requestReviewFlow = reviewManager.requestReviewFlow()
-                    
-                    requestReviewFlow.addOnCompleteListener { request ->
-                        if (request.isSuccessful) {
-                            // Launch the in-app review flow
-                            val reviewInfo = request.result
-                            val activity = context as? Activity
-                            if (activity != null) {
-                                reviewManager.launchReviewFlow(activity, reviewInfo)
-                            } else {
-                                // Fallback to Play Store if not an Activity context
-                                openPlayStore(context)
-                            }
-                        } else {
-                            // Fallback to Play Store if in-app review fails
-                            openPlayStore(context)
-                        }
-                    }
+                    openPlayStore(context)
                 }
             )
 

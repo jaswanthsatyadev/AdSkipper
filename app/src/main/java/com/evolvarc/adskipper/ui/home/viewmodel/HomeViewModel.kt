@@ -36,6 +36,9 @@ class HomeViewModel @Inject constructor(
     val isFirstHomeScreenVisit: StateFlow<Boolean> = userDataStore.isFirstHomeScreenVisit
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    val appOpenCount: StateFlow<Int> = userDataStore.appOpenCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     init {
         checkServiceStatus()
     }
