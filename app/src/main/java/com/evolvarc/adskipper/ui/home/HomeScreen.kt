@@ -337,7 +337,6 @@ fun StatusCard(
     isYouTubeActive: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current // Get context here
     val statusText = when {
         !isServiceEnabled -> "Service Disabled"
         isYouTubeActive -> "AdSkipper Active"
@@ -347,7 +346,7 @@ fun StatusCard(
     val statusSubtext = when {
         !isServiceEnabled -> "Enable accessibility to start"
         isYouTubeActive -> "Watching YouTube • Scanning for ads"
-        else -> "Open YouTube to start skipping"
+        else -> ""
     }
 
     // Gradient Colors
@@ -407,26 +406,6 @@ fun StatusCard(
                     color = Color.White.copy(alpha = 0.9f),
                     textAlign = TextAlign.Center
                 )
-                
-                if (isServiceEnabled && !isYouTubeActive) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = { 
-                            val intent = context.packageManager.getLaunchIntentForPackage("com.google.android.youtube")
-                            if (intent != null) context.startActivity(intent)
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White,
-                            contentColor = Color(0xFF2E7D32)
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.height(40.dp)
-                    ) {
-                         Icon(Icons.Rounded.PlayArrow, null, Modifier.size(18.dp))
-                         Spacer(Modifier.width(8.dp))
-                         Text("Open YouTube", fontSize = 14.sp)
-                    }
-                }
             }
         }
     }

@@ -56,12 +56,7 @@ jobs:
             **Minimum Android Version:** 7.0 (API 24)
             
             ### 🚀 What's New
-            - Fixed "Popular" button click issue on channel pages
-            - Added in-app review functionality for better ratings
-            - Added beautiful donation section with regional payment options
-            - Improved ad context detection to prevent false clicks
-            - Enhanced word boundary checks for multilingual support
-            - Performance optimizations
+            - Added donation pop up on every 2nd opening of the app
             
             ### 📥 Installation Steps
             1. Download the APK file below
