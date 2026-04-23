@@ -1,6 +1,5 @@
 package com.evolvarc.adskipper.ui.onboarding
 
-import android.Manifest
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.animation.AnimatedContent
@@ -44,7 +43,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -84,9 +82,6 @@ import com.evolvarc.adskipper.ui.onboarding.viewmodel.OnboardingViewModel
 import com.evolvarc.adskipper.ui.claim.ClaimScreen
 import com.evolvarc.adskipper.ui.theme.AdSkipperTheme
 import com.evolvarc.adskipper.utils.AccessibilityServiceUtils
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.delay
 
 @Composable
@@ -126,7 +121,6 @@ fun OnboardingScreen(
             when (it) {
                 OnboardingStep.Welcome -> WelcomeStep { viewModel.nextStep() }
                 OnboardingStep.Language -> LanguageSelectionStep { viewModel.saveLanguage(it) }
-                OnboardingStep.NotificationPermission -> NotificationPermissionStep { viewModel.nextStep() }
                 OnboardingStep.BatteryOptimization -> BatteryOptimizationStep { viewModel.nextStep() }
                 OnboardingStep.AccessibilityPermission -> AccessibilityPermissionStep { viewModel.nextStep() }
                 OnboardingStep.Claim -> ClaimScreen { onOnboardingFinished() }
@@ -552,94 +546,6 @@ fun FeatureHighlightCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-    }
-}
-
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-fun NotificationPermissionStep(onNext: () -> Unit) {
-    val notificationPermission = rememberPermissionState(permission = Manifest.permission.POST_NOTIFICATIONS)
-
-    if (notificationPermission.status.isGranted) {
-        LaunchedEffect(Unit) {
-            onNext()
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Icon
-        Card(
-            modifier = Modifier
-                .size(100.dp)
-                .shadow(elevation = 8.dp, shape = RoundedCornerShape(24.dp))
-                .clip(RoundedCornerShape(24.dp)),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Notifications,
-                    contentDescription = "Notifications",
-                    tint = Color.White,
-                    modifier = Modifier.size(48.dp)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Text(
-            text = "Enable Notifications",
-            style = MaterialTheme.typography.headlineLarge.copy(
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 28.sp
-            ),
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "We'll notify you when ads are being skipped. You can disable this anytime in settings.",
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(40.dp))
-
-        Button(
-            onClick = { notificationPermission.launchPermissionRequest() },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            ),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(
-                text = "Enable Notifications",
-                style = MaterialTheme.typography.labelLarge,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 

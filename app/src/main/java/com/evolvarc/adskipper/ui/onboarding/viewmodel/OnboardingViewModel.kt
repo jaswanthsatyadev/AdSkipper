@@ -27,8 +27,7 @@ class OnboardingViewModel @Inject constructor(
     fun nextStep() {
         when (_onboardingStep.value) {
             OnboardingStep.Welcome -> _onboardingStep.value = OnboardingStep.Language
-            OnboardingStep.Language -> _onboardingStep.value = OnboardingStep.NotificationPermission
-            OnboardingStep.NotificationPermission -> _onboardingStep.value = OnboardingStep.BatteryOptimization
+            OnboardingStep.Language -> _onboardingStep.value = OnboardingStep.BatteryOptimization
             OnboardingStep.BatteryOptimization -> _onboardingStep.value = OnboardingStep.AccessibilityPermission
             OnboardingStep.AccessibilityPermission -> _onboardingStep.value = OnboardingStep.Claim
             OnboardingStep.Claim -> { /* Onboarding finished */ }
@@ -39,7 +38,6 @@ class OnboardingViewModel @Inject constructor(
 sealed class OnboardingStep {
     object Welcome : OnboardingStep()
     object Language : OnboardingStep()
-    object NotificationPermission : OnboardingStep()
     object BatteryOptimization : OnboardingStep()
     object AccessibilityPermission : OnboardingStep()
     object Claim : OnboardingStep()

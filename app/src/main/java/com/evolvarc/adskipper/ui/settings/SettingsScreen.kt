@@ -37,12 +37,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.ui.draw.rotate
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Star
@@ -125,7 +123,6 @@ fun SettingsScreen(
     onNavigateToTroubleshoot: () -> Unit
 ) {
     val isVibrateOnSkipEnabled by viewModel.vibrateOnSkip.collectAsStateWithLifecycle()
-    val isShowNotificationEnabled by viewModel.showNotification.collectAsStateWithLifecycle()
     val skipDelay by viewModel.skipDelay.collectAsStateWithLifecycle()
     val selectedLanguage by viewModel.selectedLanguage.collectAsStateWithLifecycle()
 
@@ -210,11 +207,9 @@ fun SettingsScreen(
 
         ServiceSettingsSection(
             isVibrateOnSkipEnabled = isVibrateOnSkipEnabled,
-            isShowNotificationEnabled = isShowNotificationEnabled,
             skipDelay = skipDelay,
             selectedLanguage = selectedLanguage,
             onVibrateOnSkipChanged = { viewModel.setVibrateOnSkip(it) },
-            onShowNotificationChanged = { viewModel.setShowNotification(it) },
             onSkipDelayChanged = { viewModel.setSkipDelay(it) },
             onLanguageChanged = { viewModel.setSelectedLanguage(it) }
         )
@@ -228,11 +223,9 @@ fun SettingsScreen(
 @Composable
 fun ServiceSettingsSection(
     isVibrateOnSkipEnabled: Boolean,
-    isShowNotificationEnabled: Boolean,
     skipDelay: Int,
     selectedLanguage: String,
     onVibrateOnSkipChanged: (Boolean) -> Unit,
-    onShowNotificationChanged: (Boolean) -> Unit,
     onSkipDelayChanged: (Int) -> Unit,
     onLanguageChanged: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -275,16 +268,6 @@ fun ServiceSettingsSection(
             checked = isVibrateOnSkipEnabled,
             onCheckedChange = onVibrateOnSkipChanged,
             accentColor = Color(0xFF4CAF50)
-        )
-
-        // Hide Notification with animation
-        AnimatedSettingCard(
-            icon = Icons.Filled.Notifications,
-            title = "Hide Notifications",
-            subtitle = "Keep your notification bar clean",
-            checked = !isShowNotificationEnabled,
-            onCheckedChange = { onShowNotificationChanged(!it) },
-            accentColor = Color(0xFFE53935)
         )
 
         // Battery Optimization card

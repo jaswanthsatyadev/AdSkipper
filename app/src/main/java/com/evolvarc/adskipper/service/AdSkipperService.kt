@@ -17,7 +17,6 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
 import com.evolvarc.adskipper.data.UserDataStore
-import com.evolvarc.adskipper.notification.NotificationManager
 import com.evolvarc.adskipper.receivers.ServiceControlReceiver
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -46,7 +45,6 @@ class AdSkipperService : AccessibilityService() {
     private var originalVolume = -1
     private var isMuted = false
     private val NOTIFICATION_ID = 1
-    // private val notificationsEnabled = false // Removed hardcoded flag
     private var isForegroundActive = false
     private val serviceControlReceiver = ServiceControlReceiver()
     private var currentSkipTexts: Set<String> = emptySet()
@@ -86,14 +84,8 @@ class AdSkipperService : AccessibilityService() {
                 }
             }
 
-            // Removed automatic startForeground on connection. 
-            // We wait for YouTube to be detected.
-            // Check DataStore but don't show notification yet.
-            serviceScope.launch {
-                if (userDataStore.showNotification.first()) {
-                     NotificationManager.createNotificationChannel(this@AdSkipperService)
-                }
-            }
+            // Notifications are intentionally disabled in production for now.
+            clearLegacyNotification()
 
             // Observe Language Selection
             serviceScope.launch {
@@ -161,27 +153,38 @@ class AdSkipperService : AccessibilityService() {
             }
             lastEventTime = currentTime
 
-            val rootNode = rootInActiveWindow
-            if (rootNode == null) {
-                // Log.d(TAG, "Root node is null") 
+            val allWindows = try { windows } catch (e: Exception) { null }
+            if (allWindows.isNullOrEmpty()) {
+                val rootNode = rootInActiveWindow ?: return
+                serviceScope.launch {
+                    try {
+                        withTimeoutOrNull(3000) { 
+                            findAndClickButton(rootNode)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error in findAndClickButton: ${e.message}")
+                    } finally {
+                        try { rootNode.recycle() } catch (e: Exception) {}
+                    }
+                }
                 return
             }
-            
-            // Log.d(TAG, "Processing YouTube event")
             
             serviceScope.launch {
                 try {
                     withTimeoutOrNull(3000) { 
-                        findAndClickButton(rootNode)
+                        var found = false
+                        for (window in allWindows) {
+                            val rootNode = window.root
+                            if (rootNode != null) {
+                                found = findAndClickButton(rootNode)
+                                try { rootNode.recycle() } catch (e: Exception) {}
+                                if (found) break
+                            }
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error in findAndClickButton: ${e.message}")
-                } finally {
-                    try {
-                        rootNode.recycle()
-                    } catch (e: Exception) {
-                        // ignore
-                    }
                 }
             }
         } catch (e: Exception) {
@@ -205,13 +208,12 @@ class AdSkipperService : AccessibilityService() {
     
 
 
-    private suspend fun findAndClickButton(node: AccessibilityNodeInfo) {
+    private suspend fun findAndClickButton(node: AccessibilityNodeInfo): Boolean {
 
-        
         // Check if we just clicked recently
         val currentTime = SystemClock.uptimeMillis()
         if (currentTime - lastClickTime < MIN_CLICK_INTERVAL) {
-            return
+            return false
         }
 
         // Layer 1 & 2: Quick Search by View ID (Fastest & Safest)
@@ -227,22 +229,18 @@ class AdSkipperService : AccessibilityService() {
                 val match = nodes[0]
                 clickAndHandleAudio(match, "View ID: ${id.substringAfter("/")}")
                 nodes.forEach { it.recycle() }
-                return
+                return true
             }
-        }
-
-        // If View IDs failed, check if we are in an ad context before efficient manual text scan
-        if (!isInAdContext(node)) {
-            return 
         }
 
         // Layer 3: Efficient Single-Pass Traversal for Text/Desc
         // Replaces the expensive loop of 60+ text searches
         try {
-            traverseAndFindButton(node)
+            return traverseAndFindButton(node)
         } catch (e: Exception) {
             // Log.e(TAG, "Error in traversal", e)
         }
+        return false
     }
 
     /**
@@ -349,47 +347,7 @@ class AdSkipperService : AccessibilityService() {
         clickAndHandleAudio(target, reason)
     }
 
-    /**
-     * Validates that we're actually in an ad context.
-     * Optimized to be lightweight.
-     */
-    private fun isInAdContext(node: AccessibilityNodeInfo): Boolean {
-        // Fast Check: Look for known ad UI elements by View ID (System Indexed)
-        val adIndicators = listOf(
-            "com.google.android.youtube:id/ad_progress_bar",
-            "com.google.android.youtube:id/ad_countdown",
-            "com.google.android.youtube:id/ad_headline"
-        )
-        
-        for (indicator in adIndicators) {
-             val nodes = node.findAccessibilityNodeInfosByViewId(indicator)
-             if (nodes.isNotEmpty()) {
-                 nodes.forEach { it.recycle() }
-                 return true
-             }
-        }
-        
-        // Fallback: Check for "Visit Advertiser" or similar buttons which are common
-        val visitNodes = node.findAccessibilityNodeInfosByText("Visit advertiser")
-        if (visitNodes.isNotEmpty()) {
-            visitNodes.forEach { it.recycle() }
-            return true
-        }
-
-        // Additional check: Look for "Ad" text which is common in ad context
-        val adNodes = node.findAccessibilityNodeInfosByText("Ad")
-        if (adNodes.isNotEmpty()) {
-            adNodes.forEach { it.recycle() }
-            return true
-        }
-
-        // If no ad indicators found, we are NOT in an ad context.
-        // This prevents clicking on non-ad buttons (like "Popular" on channel pages)
-        // Layer 1&2 already checked for the explicit skip button IDs.
-        // Only proceed with text scanning if we confirmed we're in an ad context.
-        
-        return false // Only process when we're actually in an ad context
-    }
+    // Removed isInAdContext as it was causing issues with localized ad text (failing to skip ads in other languages).
     
     // Dead code removed: searchForIndicator, checkForAdIndicators, findNodeByContentDescription, findButtonInTopRightQuadrant, findButtonInRegion
 
@@ -493,27 +451,17 @@ class AdSkipperService : AccessibilityService() {
     // ... (previous code)
 
     private fun updateNotification(shouldStartForeground: Boolean) {
-        serviceScope.launch {
-            if (userDataStore.showNotification.first()) {
-                val adsSkipped = userDataStore.totalAdsSkipped.first()
-                val notification = NotificationManager.getNotificationActive(
-                    this@AdSkipperService, 
-                    adsSkipped, 
-                    "YouTube"
-                )
-                
-                if (shouldStartForeground) {
-                    try {
-                        startForeground(NOTIFICATION_ID, notification)
-                        isForegroundActive = true
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error starting foreground: ${e.message}")
-                    }
-                } else {
-                    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-                    notificationManager.notify(NOTIFICATION_ID, notification)
-                }
-            }
+        // Notifications are fully disabled by product decision.
+        // Keep this method as a no-op so existing call sites remain stable.
+        return
+    }
+
+    private fun clearLegacyNotification() {
+        try {
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            manager.cancel(NOTIFICATION_ID)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error clearing legacy notification: ${e.message}")
         }
     }
 
@@ -548,5 +496,7 @@ class AdSkipperService : AccessibilityService() {
             }
             isForegroundActive = false
         }
+
+        clearLegacyNotification()
     }
 }

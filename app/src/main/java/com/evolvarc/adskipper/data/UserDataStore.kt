@@ -62,7 +62,7 @@ class UserDataStore(context: Context) {
     }
 
     val showNotification: Flow<Boolean> = dataStore.data.map {
-        it[SHOW_NOTIFICATION_KEY] ?: true // Default to true
+        it[SHOW_NOTIFICATION_KEY] ?: false // Notifications disabled by default
     }
 
     suspend fun setShowNotification(isShow: Boolean) {
