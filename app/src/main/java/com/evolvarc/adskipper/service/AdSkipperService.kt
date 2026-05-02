@@ -39,6 +39,7 @@ class AdSkipperService : AccessibilityService() {
     private var lastClickTime = 0L
     private val serviceJob = Job()
     private val serviceScope = CoroutineScope(Dispatchers.Default + serviceJob)
+    private val searchChannel = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
 
     private lateinit var audioManager: AudioManager
     private lateinit var vibrator: Vibrator
@@ -95,6 +96,14 @@ class AdSkipperService : AccessibilityService() {
                 }
             }
             
+            // Background search processor for debounced events
+            serviceScope.launch {
+                for (event in searchChannel) {
+                    performSearch()
+                    delay(150) // Small cooldown to prevent CPU hogging and allow UI updates
+                }
+            }
+            
             Log.d(TAG, "Accessibility service initialized successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing accessibility service: ${e.message}", e)
@@ -144,51 +153,47 @@ class AdSkipperService : AccessibilityService() {
             if (!isYouTube) {
                 return 
             }
-            // Logic continues...
-
-            // Throttle events
-            val currentTime = SystemClock.uptimeMillis()
-            if (currentTime - lastEventTime < 500) {
-                return
-            }
-            lastEventTime = currentTime
-
-            val allWindows = try { windows } catch (e: Exception) { null }
-            if (allWindows.isNullOrEmpty()) {
-                val rootNode = rootInActiveWindow ?: return
-                serviceScope.launch {
-                    try {
-                        withTimeoutOrNull(3000) { 
-                            findAndClickButton(rootNode)
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error in findAndClickButton: ${e.message}")
-                    } finally {
-                        try { rootNode.recycle() } catch (e: Exception) {}
-                    }
-                }
-                return
-            }
             
-            serviceScope.launch {
-                try {
-                    withTimeoutOrNull(3000) { 
-                        var found = false
-                        for (window in allWindows) {
-                            val rootNode = window.root
-                            if (rootNode != null) {
-                                found = findAndClickButton(rootNode)
-                                try { rootNode.recycle() } catch (e: Exception) {}
-                                if (found) break
-                            }
-                        }
+            // Queue a search request. If multiple events fire rapidly, 
+            // the CONFLATED channel will just drop intermediate requests 
+            // and process the latest state, preventing dropped/missed events.
+            searchChannel.trySend(Unit)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in onAccessibilityEvent: ${e.message}")
+        }
+    }
+
+    private suspend fun performSearch() {
+        val allWindows = try { windows } catch (e: Exception) { null }
+        if (allWindows.isNullOrEmpty()) {
+            val rootNode = try { rootInActiveWindow } catch (e: Exception) { null } ?: return
+            try {
+                withTimeoutOrNull(3000) { 
+                    findAndClickButton(rootNode)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in performSearch: ${e.message}")
+            } finally {
+                try { rootNode.recycle() } catch (e: Exception) {}
+            }
+            return
+        }
+        
+        try {
+            withTimeoutOrNull(3000) { 
+                var found = false
+                for (window in allWindows) {
+                    val rootNode = window.root
+                    if (rootNode != null) {
+                        found = findAndClickButton(rootNode)
+                        try { rootNode.recycle() } catch (e: Exception) {}
+                        if (found) break
                     }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error in findAndClickButton: ${e.message}")
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error in onAccessibilityEvent: ${e.message}")
+            Log.e(TAG, "Error in performSearch loop: ${e.message}")
         }
     }
 
@@ -227,9 +232,13 @@ class AdSkipperService : AccessibilityService() {
             val nodes = node.findAccessibilityNodeInfosByViewId(id)
             if (nodes.isNotEmpty()) {
                 val match = nodes[0]
-                clickAndHandleAudio(match, "View ID: ${id.substringAfter("/")}")
+                val clickableTarget = getClickableParent(match) ?: match
+                if (clickableTarget.isEnabled) {
+                    clickAndHandleAudio(clickableTarget, "View ID: ${id.substringAfter("/")}")
+                    nodes.forEach { it.recycle() }
+                    return true
+                }
                 nodes.forEach { it.recycle() }
-                return true
             }
         }
 
@@ -268,10 +277,22 @@ class AdSkipperService : AccessibilityService() {
         return false
     }
 
+    private fun getClickableParent(node: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
+        var current = node
+        while (current != null) {
+            if (current.isClickable) {
+                return current
+            }
+            current = current.parent
+        }
+        return null
+    }
+
     private suspend fun checkNodeForSkipText(node: AccessibilityNodeInfo): Boolean {
-        // Must be clickable or have clickable parent to be actionable
-        val isActionable = node.isClickable || node.parent?.isClickable == true
-        if (!isActionable) return false
+        // Must be clickable AND enabled to be actionable. 
+        // Prevents clicking "Skip Ad in 5s" text when it's just a label or disabled button.
+        val clickableTarget = getClickableParent(node)
+        if (clickableTarget == null || !clickableTarget.isEnabled) return false
 
         val text = node.text?.toString() ?: ""
         val desc = node.contentDescription?.toString() ?: ""
@@ -296,31 +317,27 @@ class AdSkipperService : AccessibilityService() {
 
         // 1. Exact Match (Fastest) in Set
         if (textTrimmed.isNotEmpty() && currentSkipTexts.contains(textTrimmed)) {
-             clickIfValid(node, "Text Match: $textTrimmed")
+             clickAndHandleAudio(clickableTarget, "Text Match: $textTrimmed")
              return true
         }
         if (descTrimmed.isNotEmpty() && currentSkipTexts.contains(descTrimmed)) {
-             clickIfValid(node, "Desc Match: $descTrimmed")
+             clickAndHandleAudio(clickableTarget, "Desc Match: $descTrimmed")
              return true
         }
 
         // 2. Contains Match with Word Boundary Check (Iterate Set - still fast in memory)
-        // Only if we haven't found exact match.
-        // Helpful for "Skip Ad in 5s" type buttons if they become clickable text.
-        // IMPORTANT: Use word boundaries to avoid false matches (e.g., "pular" in "popular")
         val textLower = text.lowercase()
         val descLower = desc.lowercase()
         
         for (skipText in currentSkipTexts) {
              val skipLower = skipText.lowercase()
              
-             // Word boundary check: Ensure the skip text is a complete word, not a substring
-             // This prevents "pular" from matching "popular"
+             // Word boundary check: Ensure the skip text is a complete word
              val textMatches = textLower.isNotEmpty() && 
-                 (textLower == skipLower || // Exact match
-                  textLower.startsWith("$skipLower ") || // "skip ad" or "skip >"
-                  textLower.endsWith(" $skipLower") || // "ad skip"
-                  textLower.contains(" $skipLower ")) // "some skip text"
+                 (textLower == skipLower || 
+                  textLower.startsWith("$skipLower ") || 
+                  textLower.endsWith(" $skipLower") || 
+                  textLower.contains(" $skipLower "))
                   
              val descMatches = descLower.isNotEmpty() && 
                  (descLower == skipLower || 
@@ -330,21 +347,16 @@ class AdSkipperService : AccessibilityService() {
              
              if (textMatches || descMatches) {
                   // Extra check: If it's a partial match, ensure it REALLY looks like a button
-                  if (node.className?.contains("Button") == true || 
+                  if (clickableTarget.className?.contains("Button") == true || 
                       viewId.contains("button") || 
                       viewId.contains("skip")) {
-                      clickIfValid(node, "Contains Match: $skipText")
+                      clickAndHandleAudio(clickableTarget, "Contains Match: $skipText")
                       return true
                   }
              }
         }
         
         return false
-    }
-    
-    private suspend fun clickIfValid(node: AccessibilityNodeInfo, reason: String) {
-        val target = if (node.isClickable) node else node.parent ?: node
-        clickAndHandleAudio(target, reason)
     }
 
     // Removed isInAdContext as it was causing issues with localized ad text (failing to skip ads in other languages).
